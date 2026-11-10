@@ -1,0 +1,112 @@
+"""Leitura e filtragem dos artefatos usados pela visualização Streamlit."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+
+
+def carregar_execucoes(diretorio_experimentos: Path) -> pd.DataFrame:
+    """Carrega a tabela de execuções e valida as colunas essenciais."""
+
+    caminho = diretorio_experimentos / "resultados.csv"
+    if not caminho.is_file():
+        raise FileNotFoundError(f"Resultados experimentais não encontrados: {caminho}")
+    tabela = pd.read_csv(caminho)
+    colunas = {
+        "componentes_pca",
+        "semente",
+        "quantidade_clusters",
+        "expoente_fuzzificacao",
+        "diretorio_execucao",
+    }
+    ausentes = colunas - set(tabela.columns)
+    if ausentes:
+        raise ValueError(f"Colunas ausentes em resultados.csv: {sorted(ausentes)}")
+    return tabela
+
+
+def carregar_dados_execucao(
+    diretorio_experimentos: Path, diretorio_relativo: str
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Combina projeção, pertinências completas e métricas de uma execução."""
+
+    diretorio_base = diretorio_experimentos.resolve()
+    diretorio_execucao = (diretorio_base / diretorio_relativo).resolve()
+    if not diretorio_execucao.is_relative_to(diretorio_base):
+        raise ValueError("O diretório da execução está fora da pasta de experimentos.")
+
+    projecao = pd.read_csv(diretorio_execucao / "projecao_2d.csv")
+    pertinencias = pd.read_csv(diretorio_execucao / "pertinencias.csv")
+    colunas_pertinencia = [
+        coluna
+        for coluna in pertinencias.columns
+        if coluna.startswith("pertinencia_cluster_")
+    ]
+    tabela = projecao.merge(
+        pertinencias[["caminho_relativo", *colunas_pertinencia]],
+        on="caminho_relativo",
+        how="inner",
+        validate="one_to_one",
+    )
+    if len(tabela) != len(projecao):
+        raise ValueError("Nem todas as imagens da projeção têm pertinências completas.")
+    with (diretorio_execucao / "metricas.json").open(encoding="utf-8") as arquivo:
+        metricas: dict[str, Any] = json.load(arquivo)
+    return tabela, metricas
+
+
+def selecionar_galeria(
+    tabela: pd.DataFrame,
+    modo: str,
+    cluster: int | None,
+    limite: int,
+) -> pd.DataFrame:
+    """Seleciona exemplos típicos ou de fronteira para a galeria."""
+
+    if limite <= 0:
+        raise ValueError("O limite da galeria deve ser maior que zero.")
+    if modo not in {"Típicas", "Ambíguas"}:
+        raise ValueError("O modo deve ser 'Típicas' ou 'Ambíguas'.")
+
+    candidatas = tabela.copy()
+    if modo == "Típicas":
+        coluna = "pertinencia_principal"
+        if cluster is not None:
+            coluna = f"pertinencia_cluster_{cluster:03}"
+            if coluna not in candidatas:
+                raise ValueError(f"Pertinências do cluster {cluster} não encontradas.")
+        candidatas = candidatas.sort_values(coluna, ascending=False)
+    else:
+        if cluster is not None:
+            candidatas = candidatas[
+                (candidatas["cluster_principal"] == cluster)
+                | (candidatas["cluster_secundario"] == cluster)
+            ]
+        candidatas = candidatas.sort_values("diferenca_top2", ascending=True)
+    return candidatas.head(limite).reset_index(drop=True)
+
+
+def resolver_caminho_imagem(
+    diretorio_imagens: Path, caminho_relativo: str
+) -> Path:
+    """Resolve um caminho do CSV sem permitir fuga do diretório do dataset."""
+
+    raiz = diretorio_imagens.resolve()
+    caminho = (raiz / caminho_relativo).resolve()
+    if not caminho.is_relative_to(raiz):
+        raise ValueError(f"Caminho de imagem inválido: {caminho_relativo}")
+    return caminho
+
+
+def rotulo_execucao(linha: pd.Series) -> str:
+    """Cria um rótulo curto e estável para o seletor de modelo."""
+
+    return (
+        f"PCA {int(linha['componentes_pca'])} · "
+        f"semente {int(linha['semente'])} · "
+        f"m={float(linha['expoente_fuzzificacao']):.1f}"
+    )

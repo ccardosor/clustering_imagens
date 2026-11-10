@@ -1,4 +1,17 @@
-/102flowers/
-/outputs/
 /.venv/
+/.ferramentas/
+/.python-portatil/
+/.uv-cache/
+/.cache/
 __pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.streamlit/secrets.toml
+
+# Dataset e artefatos gerados localmente
+/102flowers/
+/artefatos/
+/outputs/
