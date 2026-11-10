@@ -4,5 +4,6 @@ Projeto de agrupamento visual não supervisionado para as 8.189 imagens JPEG dis
 
 - [Motivação para usar Fuzzy C-Means](MOTIVACAO.md)
 - [Plano de implementação e avaliação](PLANO.md)
+- [Hipóteses e resultados esperados](EXPECTATIVAS.md)
 
 O primeiro marco é validar o fluxo completo com uma amostra reproduzível de 500 imagens.
