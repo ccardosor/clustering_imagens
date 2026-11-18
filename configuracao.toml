@@ -1,0 +1,31 @@
+# Caminhos relativos à pasta deste arquivo.
+[projeto]
+diretorio_imagens = "102flowers/jpg"
+diretorio_artefatos = "artefatos"
+
+[inventario]
+tamanho_amostra = 500
+semente = 42
+
+[extracao]
+tamanho_lote = 16
+dispositivo = "auto"
+trabalhadores = 0
+diretorio_cache_modelos = ".cache/torch"
+
+[piloto]
+componentes_pca = 64
+quantidade_clusters = 10
+expoente_fuzzificacao = 1.2
+semente = 42
+semente_pca = 42
+maximo_iteracoes = 300
+tolerancia = 0.00001
+inicializacao = "kmeans++"
+
+[experimentos]
+componentes_pca = [64, 128]
+sementes = [42, 123, 2026]
+quantidade_clusters = 10
+expoente_fuzzificacao = 1.2
+semente_pca = 42

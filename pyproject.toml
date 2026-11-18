@@ -38,4 +38,5 @@ addopts = "-ra"
 testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["clustering_imagens*"]

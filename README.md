@@ -10,7 +10,48 @@ Projeto de agrupamento visual não supervisionado para as 8.189 imagens JPEG dis
 
 O primeiro marco é validar o fluxo completo com uma amostra reproduzível de 500 imagens.
 
-## Primeiro marco: inventário e amostra
+## Execução rápida
+
+Com Python 3.11 ou mais recente e o dataset em `102flowers/jpg/`, execute:
+
+```powershell
+python executar.py
+```
+
+O lançador cria `.venv`, instala as dependências necessárias e executa
+inventário, extração, piloto e experimentos em sequência. A primeira extração
+precisa de internet para baixar os pesos da ResNet-50. Uma falha interrompe a
+sequência com código de saída diferente de zero.
+
+Para abrir o dashboard após gerar os resultados:
+
+```powershell
+python executar.py dashboard
+```
+
+Edite `configuracao.toml` para ajustar caminhos, amostra, dispositivo, lote,
+PCA, grupos e sementes. Os caminhos são relativos à pasta do arquivo TOML.
+Você também pode escolher outro arquivo com `--config minha_configuracao.toml`.
+
+| Comando | Ação |
+| --- | --- |
+| `python executar.py --simular` | Mostra a sequência sem executar |
+| `python executar.py instalar` | Prepara o ambiente com extração |
+| `python executar.py inventario` | Valida imagens e sorteia a amostra |
+| `python executar.py extracao` | Extrai os vetores da amostra existente |
+| `python executar.py piloto` | Agrupa os vetores existentes |
+| `python executar.py experimentos` | Executa a comparação configurada |
+| `python executar.py testes` | Instala dependências de teste e roda a suíte |
+
+Use `--reinstalar` para atualizar a instalação após mudar dependências.
+Cada execução do pipeline recalcula as etapas e sobrescreve seus resultados.
+Para repetir somente uma etapa, use seu comando específico.
+
+## Comandos individuais
+
+As interfaces abaixo continuam disponíveis para uso direto.
+
+### Primeiro marco — inventário e amostra
 
 Requisitos: Python 3.11 ou mais recente. Crie um ambiente virtual e instale o
 projeto com as dependências de desenvolvimento:
