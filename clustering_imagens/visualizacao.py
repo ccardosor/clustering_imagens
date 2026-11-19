@@ -90,6 +90,39 @@ def selecionar_galeria(
     return candidatas.head(limite).reset_index(drop=True)
 
 
+def selecionar_galeria_instavel(
+    tabela: pd.DataFrame,
+    grupo_referencia: int | None,
+    limite: int,
+) -> pd.DataFrame:
+    """Seleciona imagens que mudaram de grupo em outras sementes."""
+
+    if limite <= 0:
+        raise ValueError("O limite da galeria deve ser maior que zero.")
+    colunas_obrigatorias = {
+        "grupo_referencia",
+        "mudancas_grupo",
+        "diferenca_media_pertinencias",
+    }
+    ausentes = colunas_obrigatorias - set(tabela.columns)
+    if ausentes:
+        raise ValueError(f"Colunas de estabilidade ausentes: {sorted(ausentes)}")
+
+    candidatas = tabela[tabela["mudancas_grupo"] > 0].copy()
+    if grupo_referencia is not None:
+        candidatas = candidatas[
+            candidatas["grupo_referencia"] == grupo_referencia
+        ]
+    return (
+        candidatas.sort_values(
+            ["mudancas_grupo", "diferenca_media_pertinencias"],
+            ascending=False,
+        )
+        .head(limite)
+        .reset_index(drop=True)
+    )
+
+
 def resolver_caminho_imagem(
     diretorio_imagens: Path, caminho_relativo: str
 ) -> Path:

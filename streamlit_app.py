@@ -10,12 +10,14 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from clustering_imagens.estabilidade_imagens import identificar_imagens_instaveis
 from clustering_imagens.visualizacao import (
     carregar_dados_execucao,
     carregar_execucoes,
     resolver_caminho_imagem,
     rotulo_execucao,
     selecionar_galeria,
+    selecionar_galeria_instavel,
 )
 
 RAIZ_PROJETO = Path(__file__).resolve().parent
@@ -51,6 +53,18 @@ def carregar_modelo_cache(
 
     del modificacao
     return carregar_dados_execucao(Path(diretorio), diretorio_relativo)
+
+
+@st.cache_data(max_entries=4)
+def carregar_estabilidade_cache(
+    diretorio_modelos: str,
+    sementes: tuple[int, ...],
+    modificacoes: tuple[int, ...],
+) -> pd.DataFrame:
+    """Calcula a estabilidade por imagem enquanto os modelos não mudarem."""
+
+    del modificacoes
+    return identificar_imagens_instaveis(Path(diretorio_modelos), sementes)
 
 
 st.set_page_config(
@@ -105,6 +119,35 @@ tabela, metricas = carregar_modelo_cache(
     str(DIRETORIO_EXPERIMENTOS),
     diretorio_relativo,
     caminho_pertinencias.stat().st_mtime_ns,
+)
+
+componentes_selecionados = int(linha_execucao["componentes_pca"])
+sementes_modelo = tuple(
+    sorted(
+        execucoes.loc[
+            execucoes["componentes_pca"] == componentes_selecionados,
+            "semente",
+        ].astype(int)
+    )
+)
+diretorio_modelos = (
+    DIRETORIO_EXPERIMENTOS / f"pca_{componentes_selecionados:03}"
+)
+caminhos_modelos = tuple(
+    diretorio_modelos / f"semente_{semente:04}" / "modelo_fcm.npz"
+    for semente in sementes_modelo
+)
+estabilidade_disponivel = len(sementes_modelo) >= 2 and all(
+    caminho.is_file() for caminho in caminhos_modelos
+)
+estabilidade = (
+    carregar_estabilidade_cache(
+        str(diretorio_modelos),
+        sementes_modelo,
+        tuple(caminho.stat().st_mtime_ns for caminho in caminhos_modelos),
+    )
+    if estabilidade_disponivel
+    else pd.DataFrame()
 )
 
 caminho_resumo = DIRETORIO_EXPERIMENTOS / "resumo_representacoes.csv"
@@ -227,12 +270,17 @@ st.header("Galeria de imagens")
 with st.container(horizontal=True, vertical_alignment="bottom"):
     modo_galeria = st.segmented_control(
         "Seleção",
-        ("Típicas", "Ambíguas"),
+        ("Típicas", "Ambíguas", "Instáveis")
+        if estabilidade_disponivel
+        else ("Típicas", "Ambíguas"),
         default="Típicas",
         required=True,
         key="modo_galeria",
     )
-    opcoes_cluster: list[str | int] = ["Todos", *range(1, int(metricas["quantidade_clusters"]) + 1)]
+    opcoes_cluster: list[str | int] = [
+        "Todos",
+        *range(1, int(metricas["quantidade_clusters"]) + 1),
+    ]
     cluster_selecionado = st.selectbox(
         "Grupo",
         opcoes_cluster,
@@ -248,22 +296,55 @@ with st.container(horizontal=True, vertical_alignment="bottom"):
     )
 
 cluster = None if cluster_selecionado == "Todos" else int(cluster_selecionado)
-imagens_galeria = selecionar_galeria(
-    tabela,
-    modo=str(modo_galeria),
-    cluster=cluster,
-    limite=quantidade_galeria,
-)
+if modo_galeria == "Instáveis":
+    imagens_galeria = selecionar_galeria_instavel(
+        estabilidade,
+        grupo_referencia=cluster,
+        limite=quantidade_galeria,
+    )
+else:
+    imagens_galeria = selecionar_galeria(
+        tabela,
+        modo=str(modo_galeria),
+        cluster=cluster,
+        limite=quantidade_galeria,
+    )
+
 if modo_galeria == "Típicas":
     st.caption(
         "Ordenadas pela maior pertinência ao grupo selecionado; sem filtro, "
         "mostra as imagens mais típicas de seus grupos dominantes."
     )
-else:
+elif modo_galeria == "Ambíguas":
     st.caption(
         "Ordenadas pela menor diferença entre as duas maiores pertinências, "
         "destacando fronteiras entre grupos."
     )
+else:
+    quantidade_instaveis = int((estabilidade["mudancas_grupo"] > 0).sum())
+    mudaram_em_todas = int(
+        (estabilidade["mudancas_grupo"] == len(sementes_modelo) - 1).sum()
+    )
+    st.caption(
+        f"Comparação alinhada às atribuições da semente {sementes_modelo[0]}. "
+        "O filtro de grupo também usa essa referência."
+    )
+    with st.container(horizontal=True):
+        st.metric(
+            "Imagens instáveis",
+            f"{quantidade_instaveis} de {len(estabilidade)}",
+            border=True,
+        )
+        st.metric(
+            "Taxa de instabilidade",
+            f"{quantidade_instaveis / len(estabilidade):.1%}",
+            border=True,
+        )
+        st.metric(
+            "Mudaram em todas as comparações",
+            str(mudaram_em_todas),
+            border=True,
+        )
 
 galeria = st.grid("auto", min_column_width=190, gap="small")
 for _, imagem in imagens_galeria.iterrows():
@@ -272,22 +353,52 @@ for _, imagem in imagens_galeria.iterrows():
     )
     with galeria.cell():
         if caminho.is_file():
+            grupo_alt = (
+                int(imagem["grupo_referencia"])
+                if modo_galeria == "Instáveis"
+                else int(imagem["cluster_principal"])
+            )
             st.image(
                 caminho,
                 width="stretch",
                 alt=(
-                    f"Flor associada ao grupo {int(imagem['cluster_principal'])} "
+                    f"Flor associada ao grupo {grupo_alt} "
                     "na análise visual"
                 ),
             )
         else:
             st.warning(f"Imagem não encontrada: {imagem['caminho_relativo']}")
-        st.caption(
-            f"`{imagem['caminho_relativo']}`  \n"
-            f"Grupo {int(imagem['cluster_principal'])} · "
-            f"μ={float(imagem['pertinencia_principal']):.3f} · "
-            f"Δ={float(imagem['diferenca_top2']):.3f}"
-        )
+        if modo_galeria == "Instáveis":
+            atribuicoes = [
+                f"s{sementes_modelo[0]}: G{int(imagem['grupo_referencia'])}"
+            ]
+            atribuicoes.extend(
+                f"s{semente}: G{int(imagem[f'grupo_semente_{semente:04}'])}"
+                for semente in sementes_modelo[1:]
+            )
+            st.caption(
+                f"`{imagem['caminho_relativo']}`  \n"
+                f"{' · '.join(atribuicoes)}  \n"
+                f"Mudanças: {int(imagem['mudancas_grupo'])} · "
+                "diferença média das pertinências="
+                f"{float(imagem['diferenca_media_pertinencias']):.3f}"
+            )
+        else:
+            st.caption(
+                f"`{imagem['caminho_relativo']}`  \n"
+                f"Grupo {int(imagem['cluster_principal'])} · "
+                f"μ={float(imagem['pertinencia_principal']):.3f} · "
+                f"Δ={float(imagem['diferenca_top2']):.3f}"
+            )
+
+if modo_galeria == "Instáveis":
+    st.download_button(
+        "Baixar estabilidade por imagem",
+        data=estabilidade.to_csv(index=False).encode("utf-8"),
+        file_name=f"estabilidade_imagens_pca{componentes_selecionados}.csv",
+        mime="text/csv",
+        icon=":material/download:",
+    )
 
 st.header("Comparação experimental")
 tabela_comparacao = execucoes[

@@ -341,6 +341,8 @@ grupo concentrando quase toda a amostra.
 - **Típicas:** ordena pelas maiores pertinências ao grupo selecionado.
 - **Ambíguas:** ordena pela menor diferença entre as duas maiores
   pertinências.
+- **Instáveis:** alinha os clusters das diferentes sementes, mostra como o
+  grupo dominante de cada imagem mudou e permite baixar a tabela completa.
 
 A galeria verifica se o algoritmo capturou características das flores ou
 efeitos indesejados de fundo, iluminação, escala e enquadramento.

@@ -8,6 +8,7 @@ import pytest
 from clustering_imagens.visualizacao import (
     resolver_caminho_imagem,
     selecionar_galeria,
+    selecionar_galeria_instavel,
 )
 
 
@@ -41,3 +42,18 @@ def test_seleciona_imagens_ambiguas_por_diferenca() -> None:
 def test_impede_caminho_fora_do_dataset(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="inválido"):
         resolver_caminho_imagem(tmp_path, "../fora.jpg")
+
+
+def test_selecionar_galeria_instavel_filtra_e_ordena() -> None:
+    tabela = pd.DataFrame(
+        {
+            "caminho_relativo": ["a.jpg", "b.jpg", "c.jpg", "d.jpg"],
+            "grupo_referencia": [1, 1, 1, 2],
+            "mudancas_grupo": [0, 1, 2, 2],
+            "diferenca_media_pertinencias": [0.01, 0.30, 0.10, 0.50],
+        }
+    )
+
+    resultado = selecionar_galeria_instavel(tabela, grupo_referencia=1, limite=2)
+
+    assert resultado["caminho_relativo"].tolist() == ["c.jpg", "b.jpg"]

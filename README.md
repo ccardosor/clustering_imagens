@@ -163,7 +163,8 @@ As conclusões da inspeção das dez pranchas estão em
 ## Visualização Streamlit
 
 O dashboard permite trocar a execução, comparar métricas, explorar a projeção
-bidimensional e filtrar galerias de imagens típicas ou ambíguas:
+bidimensional e filtrar galerias de imagens típicas, ambíguas ou instáveis
+entre sementes:
 
 ```powershell
 .venv\Scripts\streamlit run streamlit_app.py
