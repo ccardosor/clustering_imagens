@@ -70,12 +70,14 @@ dominantes com a referência foi 81,2% para a semente 123 e 74,2% para 2026.
 Assim, PCA-64 é a representação mais defensável para a próxima inspeção
 visual, ainda sem evidência suficiente para declarar uma configuração final.
 
-## Próximas verificações
+## Verificações posteriores
 
-1. Inspecionar no dashboard as galerias típicas e de fronteira do PCA-64.
-2. Verificar se as imagens que mudam entre sementes estão concentradas nas
-   fronteiras de pertinência.
-3. Usar as galerias para separar atributos da
-   flor de efeitos de fundo, iluminação e enquadramento.
-4. Só então extrair características das 8.189 imagens e executar a grade
-   completa de quantidades de grupos.
+A inspeção das galerias e a análise das mudanças por imagem foram realizadas e
+estão documentadas em [`ANALISE_VISUAL_PILOTO.md`](ANALISE_VISUAL_PILOTO.md).
+Elas encontraram núcleos morfológicos estáveis, grupos guiados principalmente
+por cor e regiões sensíveis à semente. Os próximos experimentos devem:
+
+1. comparar outras quantidades de grupos na amostra de 500 imagens;
+2. medir separadamente os efeitos de cor, fundo e enquadramento;
+3. escolher uma configuração por métricas, estabilidade e inspeção visual;
+4. só então extrair características das 8.189 imagens e executar a grade final.

@@ -32,6 +32,8 @@ inventariar-imagens = "clustering_imagens.inventario:principal"
 extrair-caracteristicas = "clustering_imagens.caracteristicas:principal"
 executar-piloto = "clustering_imagens.piloto:principal"
 executar-experimentos = "clustering_imagens.experimentos:principal"
+gerar-pranchas = "clustering_imagens.analise_visual:principal"
+analisar-estabilidade-imagens = "clustering_imagens.estabilidade_imagens:principal"
 
 [tool.pytest.ini_options]
 addopts = "-ra"

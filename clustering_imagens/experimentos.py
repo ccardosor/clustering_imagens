@@ -36,6 +36,27 @@ def carregar_modelo(caminho: Path) -> tuple[np.ndarray, np.ndarray]:
         return dados["centroides"].copy(), dados["pertinencias"].copy()
 
 
+def alinhar_pertinencias(
+    centroides_referencia: np.ndarray,
+    centroides_comparados: np.ndarray,
+    pertinencias_comparadas: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Alinha centroides e pertinências comparadas à ordem da referência."""
+
+    if centroides_referencia.shape != centroides_comparados.shape:
+        raise ValueError("Os conjuntos de centroides têm formatos diferentes.")
+    if pertinencias_comparadas.shape[1] != centroides_comparados.shape[0]:
+        raise ValueError("As pertinências não correspondem aos centroides comparados.")
+
+    custos = np.sum(
+        (centroides_referencia[:, None, :] - centroides_comparados[None, :, :]) ** 2,
+        axis=2,
+    )
+    linhas, colunas = linear_sum_assignment(custos)
+    ordem = colunas[np.argsort(linhas)]
+    return centroides_comparados[ordem], pertinencias_comparadas[:, ordem]
+
+
 def comparar_com_referencia(
     centroides_referencia: np.ndarray,
     pertinencias_referencia: np.ndarray,
@@ -47,19 +68,14 @@ def comparar_com_referencia(
 ) -> EstabilidadeExecucao:
     """Alinha clusters por centroides e mede a estabilidade das pertinências."""
 
-    if centroides_referencia.shape != centroides_comparados.shape:
-        raise ValueError("Os conjuntos de centroides têm formatos diferentes.")
     if pertinencias_referencia.shape != pertinencias_comparadas.shape:
         raise ValueError("As matrizes de pertinência têm formatos diferentes.")
 
-    custos = np.sum(
-        (centroides_referencia[:, None, :] - centroides_comparados[None, :, :]) ** 2,
-        axis=2,
+    centroides_alinhados, pertinencias_alinhadas = alinhar_pertinencias(
+        centroides_referencia,
+        centroides_comparados,
+        pertinencias_comparadas,
     )
-    linhas, colunas = linear_sum_assignment(custos)
-    ordem = colunas[np.argsort(linhas)]
-    pertinencias_alinhadas = pertinencias_comparadas[:, ordem]
-    centroides_alinhados = centroides_comparados[ordem]
 
     rotulos_referencia = pertinencias_referencia.argmax(axis=1)
     rotulos_alinhados = pertinencias_alinhadas.argmax(axis=1)

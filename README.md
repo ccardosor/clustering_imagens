@@ -6,6 +6,7 @@ Projeto de agrupamento visual não supervisionado para as 8.189 imagens JPEG dis
 - [Plano de implementação e avaliação](PLANO.md)
 - [Hipóteses e resultados esperados](EXPECTATIVAS.md)
 - [Resultados do piloto](RESULTADOS_PILOTO.md)
+- [Análise visual dos grupos do piloto](ANALISE_VISUAL_PILOTO.md)
 - [Guia de explicação do dashboard](EXPLICACAO_DASHBOARD.md)
 
 O primeiro marco é validar o fluxo completo com uma amostra reproduzível de 500 imagens.
@@ -133,6 +134,31 @@ Além dos artefatos de cada execução, são gerados:
 - `estabilidade.csv`: concordância após alinhar os centroides;
 - `resumo_representacoes.csv`: médias usadas no dashboard;
 - `projecao_2d.csv`: coordenadas e grupos para a visualização.
+
+## Inspeção visual e estabilidade por imagem
+
+As pranchas reproduzíveis reúnem os exemplos com maior pertinência de cada
+grupo e as imagens mais ambíguas:
+
+```powershell
+.venv\Scripts\gerar-pranchas `
+  --arquivo-pertinencias artefatos\experimentos\pca_064\semente_0042\pertinencias.csv `
+  --diretorio-imagens 102flowers\jpg `
+  --diretorio-saida artefatos\analise_visual\pca64_s42
+```
+
+A análise de estabilidade alinha os clusters de diferentes sementes e ordena
+as imagens pela quantidade de mudanças do grupo dominante:
+
+```powershell
+.venv\Scripts\analisar-estabilidade-imagens `
+  --diretorio-modelos artefatos\experimentos\pca_064 `
+  --sementes 42 123 2026 `
+  --arquivo-saida artefatos\analise_visual\pca64_s42\estabilidade_imagens.csv
+```
+
+As conclusões da inspeção das dez pranchas estão em
+[`ANALISE_VISUAL_PILOTO.md`](ANALISE_VISUAL_PILOTO.md).
 
 ## Visualização Streamlit
 
