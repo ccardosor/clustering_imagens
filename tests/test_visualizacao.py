@@ -9,6 +9,7 @@ from clustering_imagens.visualizacao import (
     resolver_caminho_imagem,
     selecionar_galeria,
     selecionar_galeria_instavel,
+    selecionar_quantidade_candidata,
 )
 
 
@@ -57,3 +58,18 @@ def test_selecionar_galeria_instavel_filtra_e_ordena() -> None:
     resultado = selecionar_galeria_instavel(tabela, grupo_referencia=1, limite=2)
 
     assert resultado["caminho_relativo"].tolist() == ["c.jpg", "b.jpg"]
+
+
+def test_selecionar_quantidade_candidata_ignora_colapso() -> None:
+    resumo = pd.DataFrame(
+        {
+            "quantidade_clusters": [8, 12],
+            "convergencias": [3, 0],
+            "execucoes": [3, 3],
+            "grupos_ocupados_minimo": [8, 12],
+            "menor_distancia_centroides_quadrada": [0.13, 1e-8],
+            "xie_beni_mediano": [4.6, 1e6],
+        }
+    )
+
+    assert selecionar_quantidade_candidata(resumo) == 8

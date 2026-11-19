@@ -104,18 +104,19 @@ medir esses efeitos antes de processar definitivamente as 8.189 imagens.
 
 O filtro de **imagens instáveis** já foi incorporado ao dashboard, com os
 grupos atribuídos nas três sementes, a variação média das pertinências e a
-opção de baixar a tabela. As próximas etapas são:
+opção de baixar a tabela. A comparação de 8, 10, 12 e 15 grupos também foi
+concluída e está em
+[`RESULTADOS_QUANTIDADE_GRUPOS.md`](RESULTADOS_QUANTIDADE_GRUPOS.md). As
+próximas etapas são:
 
-1. Comparar, ainda na amostra de 500 imagens, diferentes quantidades de grupos
-   — por exemplo 8, 10, 12 e 15 — usando estabilidade, Xie–Beni, silhueta e
-   inspeção visual conjuntamente.
-2. Repetir o teste com pequenas variações de `m` próximas de 1,2, sem aceitar
+1. Repetir o teste com pequenas variações de `m` próximas de 1,2 e oito grupos,
+   sem aceitar
    configurações que colapsem centroides ou ocupem poucos grupos.
-3. Medir a influência da cor: comparar o resultado atual com imagens em escala
+2. Medir a influência da cor: comparar o resultado atual com imagens em escala
    de cinza ou com uma representação que reduza a informação cromática.
-4. Reduzir a influência do cenário por recorte da região central ou separação
+3. Reduzir a influência do cenário por recorte da região central ou separação
    aproximada entre flor e fundo, e então comparar a estabilidade.
-5. Só depois de definir critérios mínimos de qualidade, extrair e agrupar as
+4. Só depois de definir critérios mínimos de qualidade, extrair e agrupar as
    8.189 imagens. Uma configuração candidata deve convergir em várias sementes,
    preservar todos os grupos, evitar centroides quase coincidentes e produzir
    galerias visualmente defensáveis.

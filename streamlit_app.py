@@ -18,6 +18,7 @@ from clustering_imagens.visualizacao import (
     rotulo_execucao,
     selecionar_galeria,
     selecionar_galeria_instavel,
+    selecionar_quantidade_candidata,
 )
 
 RAIZ_PROJETO = Path(__file__).resolve().parent
@@ -65,6 +66,14 @@ def carregar_estabilidade_cache(
 
     del modificacoes
     return identificar_imagens_instaveis(Path(diretorio_modelos), sementes)
+
+
+@st.cache_data(max_entries=4)
+def carregar_tabela_cache(caminho: str, modificacao: int) -> pd.DataFrame:
+    """Carrega uma tabela pequena novamente apenas quando o arquivo mudar."""
+
+    del modificacao
+    return pd.read_csv(caminho)
 
 
 st.set_page_config(
@@ -438,6 +447,135 @@ st.dataframe(
         "Silhueta K-Means": st.column_config.NumberColumn(format="%.3f"),
     },
 )
+
+caminho_avaliacao_clusters = (
+    DIRETORIO_EXPERIMENTOS.parent
+    / "avaliacao_clusters"
+    / "resumo_clusters.csv"
+)
+if caminho_avaliacao_clusters.is_file():
+    resumo_clusters = carregar_tabela_cache(
+        str(caminho_avaliacao_clusters),
+        caminho_avaliacao_clusters.stat().st_mtime_ns,
+    )
+    melhor_quantidade = selecionar_quantidade_candidata(resumo_clusters)
+
+    st.header("Escolha da quantidade de grupos")
+    st.caption(
+        "Comparação com PCA-64, m=1,2 e três sementes. Valores altos de "
+        "estabilidade não compensam falta de convergência ou centroides "
+        "praticamente coincidentes."
+    )
+    if melhor_quantidade is not None:
+        st.success(
+            f"{melhor_quantidade} grupos apresentou o melhor equilíbrio entre "
+            "convergência, separação e Xie–Beni neste piloto.",
+            title="Configuração candidata",
+        )
+
+    dados_clusters = resumo_clusters.assign(
+        grupos=resumo_clusters["quantidade_clusters"].astype(str),
+        convergencia=resumo_clusters.apply(
+            lambda linha: (
+                f"{int(linha['convergencias'])} de {int(linha['execucoes'])}"
+            ),
+            axis=1,
+        ),
+    )
+    base_clusters: Any = alt.Chart(dados_clusters)
+    grafico_xie_beni = (
+        base_clusters.mark_line(point=True, size=3)
+        .encode(
+            x=alt.X("grupos:O", title="Quantidade de grupos", sort=None),
+            y=alt.Y(
+                "xie_beni_mediano:Q",
+                title="Xie–Beni mediano (escala log)",
+                scale=alt.Scale(type="log"),
+            ),
+            tooltip=[
+                alt.Tooltip("grupos:O", title="Grupos"),
+                alt.Tooltip(
+                    "xie_beni_mediano:Q", title="Xie–Beni mediano", format=".4g"
+                ),
+                alt.Tooltip("convergencia:N", title="Convergências"),
+            ],
+        )
+        .properties(height=300)
+    )
+    grafico_convergencia = (
+        base_clusters.mark_bar()
+        .encode(
+            x=alt.X("grupos:O", title="Quantidade de grupos", sort=None),
+            y=alt.Y(
+                "convergencias:Q",
+                title="Execuções convergentes",
+                scale=alt.Scale(domain=[0, int(resumo_clusters["execucoes"].max())]),
+            ),
+            color=alt.Color(
+                "convergencia:N", title="Convergências", legend=None
+            ),
+            tooltip=[
+                alt.Tooltip("grupos:O", title="Grupos"),
+                alt.Tooltip("convergencia:N", title="Convergências"),
+                alt.Tooltip(
+                    "silhueta_fcm_media:Q", title="Silhueta FCM", format=".3f"
+                ),
+            ],
+        )
+        .properties(height=300)
+    )
+
+    coluna_xie, coluna_convergencia = st.columns(2)
+    with coluna_xie.container(border=True):
+        st.subheader("Separação fuzzy")
+        st.altair_chart(
+            grafico_xie_beni,
+            key="comparacao_xie_beni_clusters",
+            alt="Oito grupos tem o menor Xie–Beni; doze e quinze apresentam valores extremos",
+        )
+    with coluna_convergencia.container(border=True):
+        st.subheader("Convergência entre sementes")
+        st.altair_chart(
+            grafico_convergencia,
+            key="comparacao_convergencia_clusters",
+            alt="Oito grupos convergiu nas três sementes e foi a configuração mais consistente",
+        )
+
+    tabela_clusters = resumo_clusters[
+        [
+            "quantidade_clusters",
+            "convergencias",
+            "execucoes",
+            "xie_beni_mediano",
+            "silhueta_fcm_media",
+            "concordancia_dominante_media",
+            "indice_rand_ajustado_medio",
+            "menor_distancia_centroides_quadrada",
+        ]
+    ].rename(
+        columns={
+            "quantidade_clusters": "Grupos",
+            "convergencias": "Convergências",
+            "execucoes": "Execuções",
+            "xie_beni_mediano": "Xie–Beni mediano",
+            "silhueta_fcm_media": "Silhueta FCM",
+            "concordancia_dominante_media": "Concordância",
+            "indice_rand_ajustado_medio": "Rand ajustado",
+            "menor_distancia_centroides_quadrada": "Menor distância²",
+        }
+    )
+    st.dataframe(
+        tabela_clusters,
+        hide_index=True,
+        alt="Resumo da qualidade para oito, dez, doze e quinze grupos",
+        column_config={
+            "Xie–Beni mediano": st.column_config.NumberColumn(format="%.4g"),
+            "Silhueta FCM": st.column_config.NumberColumn(format="%.3f"),
+            "Concordância": st.column_config.NumberColumn(format="percent"),
+            "Rand ajustado": st.column_config.NumberColumn(format="%.3f"),
+            "Menor distância²": st.column_config.NumberColumn(format="%.4g"),
+        },
+    )
 
 st.download_button(
     "Baixar pertinências desta execução",

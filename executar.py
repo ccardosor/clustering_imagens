@@ -25,7 +25,8 @@ def principal() -> int:
     analisador.add_argument(
         "acao", nargs="?", default="pipeline",
         choices=["pipeline", "inventario", "extracao", "piloto",
-                 "experimentos", "dashboard", "instalar", "testes"],
+                 "experimentos", "avaliacao-clusters", "dashboard",
+                 "instalar", "testes"],
     )
     analisador.add_argument("--config", type=Path, default=RAIZ / "configuracao.toml")
     analisador.add_argument("--simular", action="store_true",
@@ -41,7 +42,8 @@ def principal() -> int:
         imagens = (base / config["projeto"]["diretorio_imagens"]).resolve()
         artefatos = (base / config["projeto"]["diretorio_artefatos"]).resolve()
         etapas = (
-            ["inventario", "extracao", "piloto", "experimentos"]
+            ["inventario", "extracao", "piloto", "experimentos",
+             "avaliacao-clusters"]
             if opcoes.acao == "pipeline" else [opcoes.acao]
         )
         amostra = artefatos / "inventario" / "amostra_piloto.csv"
@@ -56,6 +58,10 @@ def principal() -> int:
                        "--diretorio-saida", str(artefatos / "piloto" / "fcm")],
             "experimentos": ["--arquivo-caracteristicas", str(caracteristicas),
                              "--diretorio-saida", str(artefatos / "experimentos")],
+            "avaliacao-clusters": [
+                "--arquivo-caracteristicas", str(caracteristicas),
+                "--diretorio-saida", str(artefatos / "avaliacao_clusters"),
+            ],
         }
         # Mantém os parâmetros na interface já oferecida por cada módulo.
         comandos = []
@@ -63,7 +69,8 @@ def principal() -> int:
             if etapa not in argumentos:
                 continue
             args = argumentos[etapa].copy()
-            for chave, valor in config[etapa].items():
+            chave_configuracao = etapa.replace("-", "_")
+            for chave, valor in config[chave_configuracao].items():
                 if chave == "diretorio_cache_modelos":
                     valor = str((base / valor).resolve())
                 args.append("--" + chave.replace("_", "-"))
@@ -91,7 +98,11 @@ def principal() -> int:
             if not opcoes.simular:
                 marcador.touch()
         for etapa, args in comandos:
-            modulo = "caracteristicas" if etapa == "extracao" else etapa
+            modulo = (
+                "caracteristicas"
+                if etapa == "extracao"
+                else etapa.replace("-", "_")
+            )
             executar([str(python), "-m", f"clustering_imagens.{modulo}", *args],
                      opcoes.simular)
         if opcoes.acao == "testes":

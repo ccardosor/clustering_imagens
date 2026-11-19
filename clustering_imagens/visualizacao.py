@@ -123,6 +123,35 @@ def selecionar_galeria_instavel(
     )
 
 
+def selecionar_quantidade_candidata(resumo: pd.DataFrame) -> int | None:
+    """Seleciona a menor Xie–Beni entre configurações numericamente válidas."""
+
+    colunas = {
+        "quantidade_clusters",
+        "convergencias",
+        "execucoes",
+        "grupos_ocupados_minimo",
+        "menor_distancia_centroides_quadrada",
+        "xie_beni_mediano",
+    }
+    ausentes = colunas - set(resumo.columns)
+    if ausentes:
+        raise ValueError(f"Colunas do resumo ausentes: {sorted(ausentes)}")
+    elegiveis = resumo[
+        (resumo["convergencias"] == resumo["execucoes"])
+        & (
+            resumo["grupos_ocupados_minimo"]
+            == resumo["quantidade_clusters"]
+        )
+        & (resumo["menor_distancia_centroides_quadrada"] >= 1e-4)
+    ]
+    if elegiveis.empty:
+        return None
+    return int(
+        elegiveis.sort_values("xie_beni_mediano").iloc[0]["quantidade_clusters"]
+    )
+
+
 def resolver_caminho_imagem(
     diretorio_imagens: Path, caminho_relativo: str
 ) -> Path:

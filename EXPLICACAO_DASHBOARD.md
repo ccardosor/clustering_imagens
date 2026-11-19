@@ -354,6 +354,18 @@ lida isoladamente. A configuração mais promissora deve combinar convergência,
 centroides separados, Xie–Beni razoável, estabilidade entre sementes e
 coerência visual nas galerias.
 
+### Escolha da quantidade de grupos
+
+Esta área compara 8, 10, 12 e 15 grupos mantendo PCA-64, `m=1,2` e as três
+sementes. O gráfico de Xie–Beni usa escala logarítmica porque 12 e 15 grupos
+produziram centroides quase coincidentes e valores extremamente altos.
+
+Oito grupos foi a única configuração que convergiu nas três sementes, ocupou
+todos os grupos e manteve separação clara entre centroides. Por isso, aparece
+como candidata do piloto. A indicação não afirma que existam exatamente oito
+espécies ou categorias naturais; ela identifica o melhor equilíbrio entre as
+configurações efetivamente testadas.
+
 ## 9. Como o agrupamento pode ser melhorado
 
 ### 9.1 Usar a base completa após validar o piloto
@@ -363,9 +375,9 @@ permite testar quantidades maiores de grupos com mais exemplos por grupo.
 
 ### 9.2 Comparar mais configurações
 
-- testar 10, 25, 50 e 102 grupos;
+- concentrar a próxima rodada em oito grupos, comparando pequenas variações de
+  `m` próximas de 1,2;
 - repetir cada configuração com mais sementes;
-- avaliar outros valores do expoente de fuzzificação próximos de 1,2;
 - testar outras quantidades de componentes entre 64 e 128;
 - selecionar configurações com várias métricas, não apenas uma.
 
@@ -410,13 +422,13 @@ inspecionadas. Elas podem revelar:
 ## 10. Conclusão sugerida para a apresentação
 
 O piloto demonstra que o fluxo técnico funciona e que o Fuzzy C-Means consegue
-representar sobreposição entre padrões visuais. A configuração PCA-64 com 10
-grupos é, entre as alternativas testadas, a mais adequada para continuar a
-análise. Ela preserva 81,82% da variância, mantém os centroides separados e
-apresenta estabilidade moderada entre sementes.
+representar sobreposição entre padrões visuais. Depois de comparar 8, 10, 12 e
+15 grupos, a configuração PCA-64 com 8 grupos é a candidata mais adequada para
+continuar a análise. Ela convergiu nas três sementes, ocupou todos os grupos,
+manteve os centroides separados e apresentou o menor Xie–Beni.
 
 Ao mesmo tempo, a silhueta baixa mostra que as imagens não formam grupos
 naturalmente isolados. Portanto, o dashboard deve ser apresentado como uma
-ferramenta de exploração e diagnóstico. A próxima etapa é usar as galerias para
-identificar o que caracteriza cada grupo e, somente depois, executar e validar
-o experimento na base completa.
+ferramenta de exploração e diagnóstico. A próxima etapa é testar pequenas
+variações de `m` com oito grupos, medir a influência da cor e do fundo e,
+somente depois, executar e validar o experimento na base completa.

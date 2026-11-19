@@ -7,6 +7,7 @@ Projeto de agrupamento visual não supervisionado para as 8.189 imagens JPEG dis
 - [Hipóteses e resultados esperados](EXPECTATIVAS.md)
 - [Resultados do piloto](RESULTADOS_PILOTO.md)
 - [Análise visual dos grupos do piloto](ANALISE_VISUAL_PILOTO.md)
+- [Comparação da quantidade de grupos](RESULTADOS_QUANTIDADE_GRUPOS.md)
 - [Guia de explicação do dashboard](EXPLICACAO_DASHBOARD.md)
 
 O primeiro marco é validar o fluxo completo com uma amostra reproduzível de 500 imagens.
@@ -20,9 +21,10 @@ python executar.py
 ```
 
 O lançador cria `.venv`, instala as dependências necessárias e executa
-inventário, extração, piloto e experimentos em sequência. A primeira extração
-precisa de internet para baixar os pesos da ResNet-50. Uma falha interrompe a
-sequência com código de saída diferente de zero.
+inventário, extração, piloto, experimentos e comparação da quantidade de grupos
+em sequência. A primeira extração precisa de internet para baixar os pesos da
+ResNet-50. Uma falha interrompe a sequência com código de saída diferente de
+zero.
 
 Para abrir o dashboard após gerar os resultados:
 
@@ -42,6 +44,7 @@ Você também pode escolher outro arquivo com `--config minha_configuracao.toml`
 | `python executar.py extracao` | Extrai os vetores da amostra existente |
 | `python executar.py piloto` | Agrupa os vetores existentes |
 | `python executar.py experimentos` | Executa a comparação configurada |
+| `python executar.py avaliacao-clusters` | Compara 8, 10, 12 e 15 grupos |
 | `python executar.py testes` | Instala dependências de teste e roda a suíte |
 
 Use `--reinstalar` para atualizar a instalação após mudar dependências.
@@ -134,6 +137,19 @@ Além dos artefatos de cada execução, são gerados:
 - `estabilidade.csv`: concordância após alinhar os centroides;
 - `resumo_representacoes.csv`: médias usadas no dashboard;
 - `projecao_2d.csv`: coordenadas e grupos para a visualização.
+
+## Comparação da quantidade de grupos
+
+Para comparar 8, 10, 12 e 15 grupos mantendo PCA-64, `m=1,2` e as mesmas
+sementes:
+
+```powershell
+python executar.py avaliacao-clusters
+```
+
+O resumo é salvo em `artefatos/avaliacao_clusters/resumo_clusters.csv` e
+aparece automaticamente no dashboard. Os resultados observados no piloto
+estão documentados em [`RESULTADOS_QUANTIDADE_GRUPOS.md`](RESULTADOS_QUANTIDADE_GRUPOS.md).
 
 ## Inspeção visual e estabilidade por imagem
 

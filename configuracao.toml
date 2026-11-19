@@ -29,3 +29,10 @@ sementes = [42, 123, 2026]
 quantidade_clusters = 10
 expoente_fuzzificacao = 1.2
 semente_pca = 42
+
+[avaliacao_clusters]
+quantidades_clusters = [8, 10, 12, 15]
+sementes = [42, 123, 2026]
+componentes_pca = 64
+expoente_fuzzificacao = 1.2
+semente_pca = 42
