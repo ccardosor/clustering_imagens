@@ -26,7 +26,7 @@ def principal() -> int:
         "acao", nargs="?", default="pipeline",
         choices=["pipeline", "inventario", "extracao", "piloto",
                  "experimentos", "avaliacao-clusters", "dashboard",
-                 "instalar", "testes"],
+                 "avaliacao-fuzzificacao", "instalar", "testes"],
     )
     analisador.add_argument("--config", type=Path, default=RAIZ / "configuracao.toml")
     analisador.add_argument("--simular", action="store_true",
@@ -43,7 +43,7 @@ def principal() -> int:
         artefatos = (base / config["projeto"]["diretorio_artefatos"]).resolve()
         etapas = (
             ["inventario", "extracao", "piloto", "experimentos",
-             "avaliacao-clusters"]
+             "avaliacao-clusters", "avaliacao-fuzzificacao"]
             if opcoes.acao == "pipeline" else [opcoes.acao]
         )
         amostra = artefatos / "inventario" / "amostra_piloto.csv"
@@ -61,6 +61,10 @@ def principal() -> int:
             "avaliacao-clusters": [
                 "--arquivo-caracteristicas", str(caracteristicas),
                 "--diretorio-saida", str(artefatos / "avaliacao_clusters"),
+            ],
+            "avaliacao-fuzzificacao": [
+                "--arquivo-caracteristicas", str(caracteristicas),
+                "--diretorio-saida", str(artefatos / "avaliacao_fuzzificacao"),
             ],
         }
         # Mantém os parâmetros na interface já oferecida por cada módulo.

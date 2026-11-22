@@ -1,5 +1,11 @@
 # Resultados do piloto
 
+> **Registro histórico.** Este documento descreve o primeiro ensaio com 10
+> grupos. A configuração candidata atual usa PCA-64, 8 grupos e `m=1,20`, após
+> as comparações registradas em
+> [`RESULTADOS_QUANTIDADE_GRUPOS.md`](RESULTADOS_QUANTIDADE_GRUPOS.md) e
+> [`RESULTADOS_FUZZIFICACAO.md`](RESULTADOS_FUZZIFICACAO.md).
+
 Execução realizada em 10 de novembro de 2026 com a amostra reproduzível de 500
 imagens e semente 42.
 

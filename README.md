@@ -8,6 +8,7 @@ Projeto de agrupamento visual não supervisionado para as 8.189 imagens JPEG dis
 - [Resultados do piloto](RESULTADOS_PILOTO.md)
 - [Análise visual dos grupos do piloto](ANALISE_VISUAL_PILOTO.md)
 - [Comparação da quantidade de grupos](RESULTADOS_QUANTIDADE_GRUPOS.md)
+- [Comparação do expoente de fuzzificação](RESULTADOS_FUZZIFICACAO.md)
 - [Guia de explicação do dashboard](EXPLICACAO_DASHBOARD.md)
 
 O primeiro marco é validar o fluxo completo com uma amostra reproduzível de 500 imagens.
@@ -21,10 +22,10 @@ python executar.py
 ```
 
 O lançador cria `.venv`, instala as dependências necessárias e executa
-inventário, extração, piloto, experimentos e comparação da quantidade de grupos
-em sequência. A primeira extração precisa de internet para baixar os pesos da
-ResNet-50. Uma falha interrompe a sequência com código de saída diferente de
-zero.
+inventário, extração, piloto, experimentos e comparações da quantidade de
+grupos e do expoente de fuzzificação em sequência. A primeira extração precisa
+de internet para baixar os pesos da ResNet-50. Uma falha interrompe a sequência
+com código de saída diferente de zero.
 
 Para abrir o dashboard após gerar os resultados:
 
@@ -45,6 +46,7 @@ Você também pode escolher outro arquivo com `--config minha_configuracao.toml`
 | `python executar.py piloto` | Agrupa os vetores existentes |
 | `python executar.py experimentos` | Executa a comparação configurada |
 | `python executar.py avaliacao-clusters` | Compara 8, 10, 12 e 15 grupos |
+| `python executar.py avaliacao-fuzzificacao` | Compara valores de `m` com 8 grupos |
 | `python executar.py testes` | Instala dependências de teste e roda a suíte |
 
 Use `--reinstalar` para atualizar a instalação após mudar dependências.
@@ -101,11 +103,14 @@ amostra:
   --arquivo-saida artefatos\piloto\caracteristicas.npz
 ```
 
-O piloto aplica PCA com 64 componentes, normalização L2 e Fuzzy C-Means com 10
-grupos, expoente de fuzzificação 1,2 e inicialização k-means++. O valor 1,2 é o
-padrão do piloto porque 1,5 e 2,0 produziram centroides coincidentes nessa
-amostra; os resultados e a justificativa estão em
-[`RESULTADOS_PILOTO.md`](RESULTADOS_PILOTO.md).
+O piloto aplica PCA com 64 componentes, normalização L2 e Fuzzy C-Means com 8
+grupos, expoente de fuzzificação 1,2 e inicialização k-means++. Essa configuração
+foi promovida após comparar quantidades de grupos e valores de `m` em três
+sementes. Os resultados e as justificativas estão em
+[`RESULTADOS_QUANTIDADE_GRUPOS.md`](RESULTADOS_QUANTIDADE_GRUPOS.md) e
+[`RESULTADOS_FUZZIFICACAO.md`](RESULTADOS_FUZZIFICACAO.md). O primeiro ensaio,
+com 10 grupos, permanece documentado em
+[`RESULTADOS_PILOTO.md`](RESULTADOS_PILOTO.md) como histórico experimental.
 
 ```powershell
 .venv\Scripts\executar-piloto `
@@ -150,6 +155,19 @@ python executar.py avaliacao-clusters
 O resumo é salvo em `artefatos/avaliacao_clusters/resumo_clusters.csv` e
 aparece automaticamente no dashboard. Os resultados observados no piloto
 estão documentados em [`RESULTADOS_QUANTIDADE_GRUPOS.md`](RESULTADOS_QUANTIDADE_GRUPOS.md).
+
+## Comparação do expoente de fuzzificação
+
+Depois de selecionar oito grupos, compare valores de `m` próximos de 1,2:
+
+```powershell
+python executar.py avaliacao-fuzzificacao
+```
+
+O resumo é salvo em
+`artefatos/avaliacao_fuzzificacao/resumo_fuzzificacao.csv` e também aparece no
+dashboard. A interpretação está em
+[`RESULTADOS_FUZZIFICACAO.md`](RESULTADOS_FUZZIFICACAO.md).
 
 ## Inspeção visual e estabilidade por imagem
 

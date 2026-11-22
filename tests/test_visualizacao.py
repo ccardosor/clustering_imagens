@@ -7,6 +7,7 @@ import pytest
 
 from clustering_imagens.visualizacao import (
     resolver_caminho_imagem,
+    selecionar_expoente_candidato,
     selecionar_galeria,
     selecionar_galeria_instavel,
     selecionar_quantidade_candidata,
@@ -73,3 +74,20 @@ def test_selecionar_quantidade_candidata_ignora_colapso() -> None:
     )
 
     assert selecionar_quantidade_candidata(resumo) == 8
+
+
+def test_selecionar_expoente_candidato_prioriza_estabilidade_valida() -> None:
+    resumo = pd.DataFrame(
+        {
+            "expoente_fuzzificacao": [1.1, 1.2, 1.25],
+            "quantidade_clusters": [8, 8, 8],
+            "convergencias": [3, 3, 0],
+            "execucoes": [3, 3, 3],
+            "grupos_ocupados_minimo": [8, 8, 8],
+            "menor_distancia_centroides_quadrada": [0.25, 0.13, 1e-7],
+            "concordancia_dominante_media": [0.64, 0.786, 0.99],
+            "xie_beni_mediano": [2.45, 4.67, 5e5],
+        }
+    )
+
+    assert selecionar_expoente_candidato(resumo) == 1.2

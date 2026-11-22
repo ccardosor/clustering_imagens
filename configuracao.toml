@@ -15,7 +15,7 @@ diretorio_cache_modelos = ".cache/torch"
 
 [piloto]
 componentes_pca = 64
-quantidade_clusters = 10
+quantidade_clusters = 8
 expoente_fuzzificacao = 1.2
 semente = 42
 semente_pca = 42
@@ -26,7 +26,7 @@ inicializacao = "kmeans++"
 [experimentos]
 componentes_pca = [64, 128]
 sementes = [42, 123, 2026]
-quantidade_clusters = 10
+quantidade_clusters = 8
 expoente_fuzzificacao = 1.2
 semente_pca = 42
 
@@ -35,4 +35,11 @@ quantidades_clusters = [8, 10, 12, 15]
 sementes = [42, 123, 2026]
 componentes_pca = 64
 expoente_fuzzificacao = 1.2
+semente_pca = 42
+
+[avaliacao_fuzzificacao]
+expoentes = [1.10, 1.15, 1.20, 1.25, 1.30]
+sementes = [42, 123, 2026]
+componentes_pca = 64
+quantidade_clusters = 8
 semente_pca = 42

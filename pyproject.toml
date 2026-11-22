@@ -33,6 +33,7 @@ extrair-caracteristicas = "clustering_imagens.caracteristicas:principal"
 executar-piloto = "clustering_imagens.piloto:principal"
 executar-experimentos = "clustering_imagens.experimentos:principal"
 avaliar-quantidades-clusters = "clustering_imagens.avaliacao_clusters:principal"
+avaliar-fuzzificacao = "clustering_imagens.avaliacao_fuzzificacao:principal"
 gerar-pranchas = "clustering_imagens.analise_visual:principal"
 analisar-estabilidade-imagens = "clustering_imagens.estabilidade_imagens:principal"
 

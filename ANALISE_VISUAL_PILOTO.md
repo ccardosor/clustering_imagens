@@ -1,5 +1,10 @@
 # Análise visual dos grupos do piloto
 
+> **Registro histórico.** A inspeção abaixo corresponde ao primeiro ensaio com
+> 10 grupos. A configuração candidata atual usa PCA-64, 8 grupos e `m=1,20`;
+> consulte [`RESULTADOS_QUANTIDADE_GRUPOS.md`](RESULTADOS_QUANTIDADE_GRUPOS.md)
+> e [`RESULTADOS_FUZZIFICACAO.md`](RESULTADOS_FUZZIFICACAO.md).
+
 Esta análise verifica se os dez grupos do piloto PCA-64 representam padrões
 visuais reconhecíveis ou apenas separações numéricas difíceis de interpretar.
 Ela complementa as métricas de `RESULTADOS_PILOTO.md`: uma silhueta baixa pode
@@ -107,16 +112,16 @@ grupos atribuídos nas três sementes, a variação média das pertinências e a
 opção de baixar a tabela. A comparação de 8, 10, 12 e 15 grupos também foi
 concluída e está em
 [`RESULTADOS_QUANTIDADE_GRUPOS.md`](RESULTADOS_QUANTIDADE_GRUPOS.md). As
-próximas etapas são:
+comparações de fuzzificação também foram concluídas em
+[`RESULTADOS_FUZZIFICACAO.md`](RESULTADOS_FUZZIFICACAO.md). A configuração
+PCA-64, oito grupos e `m=1,20` já foi promovida para os artefatos principais.
+As próximas etapas são:
 
-1. Repetir o teste com pequenas variações de `m` próximas de 1,2 e oito grupos,
-   sem aceitar
-   configurações que colapsem centroides ou ocupem poucos grupos.
-2. Medir a influência da cor: comparar o resultado atual com imagens em escala
+1. Medir a influência da cor: comparar o resultado atual com imagens em escala
    de cinza ou com uma representação que reduza a informação cromática.
-3. Reduzir a influência do cenário por recorte da região central ou separação
+2. Reduzir a influência do cenário por recorte da região central ou separação
    aproximada entre flor e fundo, e então comparar a estabilidade.
-4. Só depois de definir critérios mínimos de qualidade, extrair e agrupar as
+3. Só depois de definir critérios mínimos de qualidade, extrair e agrupar as
    8.189 imagens. Uma configuração candidata deve convergir em várias sementes,
    preservar todos os grupos, evitar centroides quase coincidentes e produzir
    galerias visualmente defensáveis.

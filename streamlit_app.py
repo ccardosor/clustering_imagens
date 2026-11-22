@@ -16,6 +16,7 @@ from clustering_imagens.visualizacao import (
     carregar_execucoes,
     resolver_caminho_imagem,
     rotulo_execucao,
+    selecionar_expoente_candidato,
     selecionar_galeria,
     selecionar_galeria_instavel,
     selecionar_quantidade_candidata,
@@ -571,6 +572,167 @@ if caminho_avaliacao_clusters.is_file():
         column_config={
             "Xie–Beni mediano": st.column_config.NumberColumn(format="%.4g"),
             "Silhueta FCM": st.column_config.NumberColumn(format="%.3f"),
+            "Concordância": st.column_config.NumberColumn(format="percent"),
+            "Rand ajustado": st.column_config.NumberColumn(format="%.3f"),
+            "Menor distância²": st.column_config.NumberColumn(format="%.4g"),
+        },
+    )
+
+caminho_avaliacao_fuzzificacao = (
+    DIRETORIO_EXPERIMENTOS.parent
+    / "avaliacao_fuzzificacao"
+    / "resumo_fuzzificacao.csv"
+)
+if caminho_avaliacao_fuzzificacao.is_file():
+    resumo_fuzzificacao = carregar_tabela_cache(
+        str(caminho_avaliacao_fuzzificacao),
+        caminho_avaliacao_fuzzificacao.stat().st_mtime_ns,
+    )
+    melhor_expoente = selecionar_expoente_candidato(resumo_fuzzificacao)
+
+    st.header("Escolha do expoente de fuzzificação")
+    st.caption(
+        "Comparação com PCA-64, oito grupos e três sementes. Pertinências mais "
+        "altas em m baixo significam uma solução mais rígida; não representam "
+        "automaticamente um agrupamento fuzzy melhor."
+    )
+    if melhor_expoente is not None:
+        st.success(
+            f"m={melhor_expoente:.2f} preservou os oito grupos, convergiu nas "
+            "três sementes e apresentou a maior concordância entre as soluções "
+            "numericamente válidas.",
+            title="Expoente candidato",
+        )
+
+    dados_fuzzificacao = resumo_fuzzificacao.assign(
+        expoente=resumo_fuzzificacao["expoente_fuzzificacao"].map(
+            lambda valor: f"{float(valor):.2f}"
+        ),
+        convergencia=resumo_fuzzificacao.apply(
+            lambda linha: (
+                f"{int(linha['convergencias'])} de {int(linha['execucoes'])}"
+            ),
+            axis=1,
+        ),
+        status=resumo_fuzzificacao.apply(
+            lambda linha: (
+                "Válida"
+                if (
+                    linha["convergencias"] == linha["execucoes"]
+                    and linha["grupos_ocupados_minimo"]
+                    == linha["quantidade_clusters"]
+                    and linha["menor_distancia_centroides_quadrada"] >= 1e-4
+                )
+                else "Degenerada ou sem convergência"
+            ),
+            axis=1,
+        ),
+    )
+    dados_xie_finitos = dados_fuzzificacao[
+        dados_fuzzificacao["xie_beni_mediano"] < float("inf")
+    ]
+    base_xie_fuzzificacao: Any = alt.Chart(dados_xie_finitos)
+    grafico_xie_fuzzificacao = (
+        base_xie_fuzzificacao.mark_line(point=True, size=3)
+        .encode(
+            x=alt.X("expoente:O", title="Expoente m", sort=None),
+            y=alt.Y(
+                "xie_beni_mediano:Q",
+                title="Xie–Beni mediano (escala log)",
+                scale=alt.Scale(type="log"),
+            ),
+            tooltip=[
+                alt.Tooltip("expoente:O", title="m"),
+                alt.Tooltip(
+                    "xie_beni_mediano:Q", title="Xie–Beni mediano", format=".4g"
+                ),
+                alt.Tooltip("convergencia:N", title="Convergências"),
+            ],
+        )
+        .properties(height=300)
+    )
+    base_estabilidade_fuzzificacao: Any = alt.Chart(dados_fuzzificacao)
+    grafico_estabilidade_fuzzificacao = (
+        base_estabilidade_fuzzificacao.mark_bar()
+        .encode(
+            x=alt.X("expoente:O", title="Expoente m", sort=None),
+            y=alt.Y(
+                "concordancia_dominante_media:Q",
+                title="Concordância entre sementes",
+                scale=alt.Scale(domain=[0, 1]),
+                axis=alt.Axis(format="%"),
+            ),
+            color=alt.Color("status:N", title="Diagnóstico"),
+            tooltip=[
+                alt.Tooltip("expoente:O", title="m"),
+                alt.Tooltip(
+                    "concordancia_dominante_media:Q",
+                    title="Concordância",
+                    format=".1%",
+                ),
+                alt.Tooltip("convergencia:N", title="Convergências"),
+                alt.Tooltip("status:N", title="Diagnóstico"),
+            ],
+        )
+        .properties(height=300)
+    )
+
+    coluna_xie_m, coluna_estabilidade_m = st.columns(2)
+    with coluna_xie_m.container(border=True):
+        st.subheader("Separação por expoente")
+        st.altair_chart(
+            grafico_xie_fuzzificacao,
+            key="comparacao_xie_beni_fuzzificacao",
+            alt="Xie–Beni cresce rapidamente quando m chega a 1,25 e os centroides colapsam",
+        )
+    with coluna_estabilidade_m.container(border=True):
+        st.subheader("Estabilidade e diagnóstico")
+        st.altair_chart(
+            grafico_estabilidade_fuzzificacao,
+            key="comparacao_estabilidade_fuzzificacao",
+            alt="m igual a 1,20 é o mais estável entre os expoentes que convergiram sem colapso",
+        )
+
+    st.warning(
+        "A concordância muito alta de m=1,25 e m=1,30 é artificial: nenhuma "
+        "dessas execuções convergiu e os centroides ficaram praticamente "
+        "coincidentes.",
+        title="Estabilidade degenerada",
+    )
+    tabela_fuzzificacao = resumo_fuzzificacao[
+        [
+            "expoente_fuzzificacao",
+            "convergencias",
+            "execucoes",
+            "xie_beni_mediano",
+            "silhueta_fcm_media",
+            "pertinencia_principal_media",
+            "concordancia_dominante_media",
+            "indice_rand_ajustado_medio",
+            "menor_distancia_centroides_quadrada",
+        ]
+    ].rename(
+        columns={
+            "expoente_fuzzificacao": "Expoente m",
+            "convergencias": "Convergências",
+            "execucoes": "Execuções",
+            "xie_beni_mediano": "Xie–Beni mediano",
+            "silhueta_fcm_media": "Silhueta FCM",
+            "pertinencia_principal_media": "Pertinência principal",
+            "concordancia_dominante_media": "Concordância",
+            "indice_rand_ajustado_medio": "Rand ajustado",
+            "menor_distancia_centroides_quadrada": "Menor distância²",
+        }
+    )
+    st.dataframe(
+        tabela_fuzzificacao,
+        hide_index=True,
+        alt="Resumo dos expoentes de fuzzificação entre 1,10 e 1,30",
+        column_config={
+            "Expoente m": st.column_config.NumberColumn(format="%.2f"),
+            "Xie–Beni mediano": st.column_config.NumberColumn(format="%.4g"),
+            "Silhueta FCM": st.column_config.NumberColumn(format="%.3f"),
+            "Pertinência principal": st.column_config.NumberColumn(format="%.3f"),
             "Concordância": st.column_config.NumberColumn(format="percent"),
             "Rand ajustado": st.column_config.NumberColumn(format="%.3f"),
             "Menor distância²": st.column_config.NumberColumn(format="%.4g"),

@@ -152,6 +152,39 @@ def selecionar_quantidade_candidata(resumo: pd.DataFrame) -> int | None:
     )
 
 
+def selecionar_expoente_candidato(resumo: pd.DataFrame) -> float | None:
+    """Seleciona o expoente válido mais estável, usando Xie–Beni no desempate."""
+
+    colunas = {
+        "expoente_fuzzificacao",
+        "quantidade_clusters",
+        "convergencias",
+        "execucoes",
+        "grupos_ocupados_minimo",
+        "menor_distancia_centroides_quadrada",
+        "concordancia_dominante_media",
+        "xie_beni_mediano",
+    }
+    ausentes = colunas - set(resumo.columns)
+    if ausentes:
+        raise ValueError(f"Colunas do resumo ausentes: {sorted(ausentes)}")
+    elegiveis = resumo[
+        (resumo["convergencias"] == resumo["execucoes"])
+        & (
+            resumo["grupos_ocupados_minimo"]
+            == resumo["quantidade_clusters"]
+        )
+        & (resumo["menor_distancia_centroides_quadrada"] >= 1e-4)
+    ]
+    if elegiveis.empty:
+        return None
+    ordenadas = elegiveis.sort_values(
+        ["concordancia_dominante_media", "xie_beni_mediano"],
+        ascending=[False, True],
+    )
+    return float(ordenadas.iloc[0]["expoente_fuzzificacao"])
+
+
 def resolver_caminho_imagem(
     diretorio_imagens: Path, caminho_relativo: str
 ) -> Path:

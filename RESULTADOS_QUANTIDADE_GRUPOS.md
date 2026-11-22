@@ -86,7 +86,9 @@ observado entre:
 - estabilidade moderada;
 - galerias visualmente interpretáveis.
 
-O próximo passo é testar pequenas variações do expoente de fuzzificação ao
-redor de `m=1,2` usando oito grupos. Depois, deve-se medir a influência da cor e
-do fundo antes de expandir o processamento para o dataset completo.
+As variações do expoente de fuzzificação já foram testadas e estão documentadas
+em [`RESULTADOS_FUZZIFICACAO.md`](RESULTADOS_FUZZIFICACAO.md). `m=1,20`
+permaneceu como candidato. PCA-64, oito grupos e `m=1,20` já foram promovidos
+para os artefatos principais. O próximo passo é medir a influência da cor e do
+fundo antes de expandir o processamento para o dataset completo.
 

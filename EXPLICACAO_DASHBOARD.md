@@ -31,7 +31,7 @@ fluxo completo antes de executar o experimento em toda a base. A amostra de
 Ela é grande o suficiente para:
 
 - testar leitura, pré-processamento e alinhamento entre arquivos e vetores;
-- produzir aproximadamente 50 imagens por grupo quando são usados 10 grupos;
+- produzir aproximadamente 62 imagens por grupo quando são usados 8 grupos;
 - observar exemplos típicos e de fronteira;
 - comparar representações e sementes;
 - identificar colapso de centroides e problemas de convergência;
@@ -131,10 +131,12 @@ de outro. O FCM preserva essa sobreposição, enquanto o K-Means obriga cada
 imagem a pertencer exclusivamente a um grupo.
 
 O expoente de fuzzificação controla quanto as pertinências podem se espalhar.
-No piloto, valores tradicionais como 1,5 e 2,0 fizeram os centroides se
-aproximarem e as pertinências ficarem quase uniformes. O valor 1,2 preservou os
-10 grupos e foi adotado como hipótese experimental. Ele ainda precisa ser
-validado na base completa.
+No piloto inicial, valores tradicionais como 1,5 e 2,0 fizeram os centroides
+se aproximarem e as pertinências ficarem quase uniformes. Depois de selecionar
+8 grupos, foram comparados `m=1,10`, `1,15`, `1,20`, `1,25` e `1,30` em três
+sementes. O valor 1,2 preservou os 8 grupos, convergiu nas três execuções e
+apresentou a maior estabilidade entre as soluções numericamente válidas. Ele
+continua sendo uma hipótese experimental a validar na base completa.
 
 O K-Means continua sendo executado sobre a mesma representação como uma
 referência de agrupamento rígido.
@@ -169,25 +171,25 @@ A diferença é quantas direções principais são mantidas:
 
 | Representação | Componentes | Variância preservada | Convergências | Interpretação do piloto |
 |:---|---:|---:|---:|:---|
-| PCA-64 | 64 | 81,82% | 2 de 3 | Melhor separação e comportamento mais estável |
-| PCA-128 | 128 | 91,17% | 0 de 3 | Centroides quase coincidentes e Xie–Beni muito alto |
+| PCA-64 | 64 | 81,82% | 3 de 3 | Melhor separação e comportamento mais estável |
+| PCA-128 | 128 | 91,17% | 3 de 3 | Convergência numérica, mas uma semente degenerada |
 
 O PCA-128 preserva cerca de nove pontos percentuais adicionais de variância,
-mas também mantém mais dimensões de baixa contribuição. No piloto, esse espaço
-maior voltou a apresentar concentração de distâncias. Nenhuma das três
-sementes convergiu dentro de 300 iterações.
+mas também mantém mais dimensões de baixa contribuição. No experimento atual,
+as três sementes convergiram numericamente, porém a semente 42 terminou com
+centroides quase coincidentes e Xie–Beni de aproximadamente 1,16 milhão. Isso
+mostra que convergência, isoladamente, não comprova a qualidade do resultado.
 
-No PCA-64, as sementes 42 e 123 convergiram. A semente 2026 atingiu o limite de
-iterações, mas manteve os 10 centroides separados. A concordância das
-atribuições dominantes com a semente de referência foi 81,2% para a semente
-123 e 74,2% para 2026.
+No PCA-64, as três sementes convergiram, ocuparam os 8 grupos e mantiveram os
+centroides separados. A concordância dominante média foi 78,6% e o índice Rand
+ajustado médio foi 0,639, indicando estabilidade moderada.
 
-A concordância média de 99,9% mostrada para o PCA-128 não representa um modelo
-melhor. Como os centroides estavam quase coincidentes, as execuções seguiram
-trajetórias degeneradas muito semelhantes. Por isso, estabilidade sempre deve
-ser interpretada junto com convergência, separação dos centroides e Xie–Beni.
+A estabilidade média do PCA-128 foi inferior à do PCA-64. Além disso, uma das
+execuções convergiu para um estado degenerado. Por isso, estabilidade sempre
+deve ser interpretada junto com convergência, separação dos centroides e
+Xie–Beni.
 
-## 6. Por que foram escolhidos 64 componentes e 10 grupos?
+## 6. Por que foram escolhidos 64 componentes e 8 grupos?
 
 ### 6.1 Escolha de 64 componentes
 
@@ -195,7 +197,7 @@ O valor 64 foi escolhido porque oferece um equilíbrio empírico entre retençã
 de informação e simplificação:
 
 - preservou 81,82% da variância da amostra;
-- duas das três sementes convergiram;
+- as três sementes convergiram com 8 grupos;
 - manteve distância mensurável entre os centroides;
 - apresentou Xie–Beni muito menor que o PCA-128;
 - reduziu o vetor original em 32 vezes, de 2.048 para 64 dimensões;
@@ -204,20 +206,25 @@ de informação e simplificação:
 Portanto, 64 não é um número universalmente ideal. É a configuração mais
 defensável entre as duas alternativas testadas no piloto.
 
-### 6.2 Escolha de 10 grupos
+### 6.2 Escolha de 8 grupos
 
-Dez grupos foram usados para validar o fluxo com uma quantidade pequena e
-interpretável. Com 500 imagens, isso produz em média 50 imagens por grupo e
-permite montar galerias com exemplos suficientes.
+O piloto inicial usou 10 grupos como uma quantidade pequena e interpretável.
+Depois, foram comparados 8, 10, 12 e 15 grupos com PCA-64, `m=1,2` e três
+sementes. Oito grupos foi a única configuração que convergiu nas três sementes,
+ocupou todos os grupos e manteve separação mensurável entre os centroides. Com
+500 imagens, isso produz em média 62,5 imagens por grupo e permite montar
+galerias com exemplos suficientes.
 
 Começar diretamente com 102 grupos seria arriscado: haveria menos de cinco
 imagens por grupo, em média, na amostra. Isso aumentaria a sensibilidade à
 inicialização e dificultaria distinguir grupos reais de divisões ocasionais.
 
-O número 10 não representa dez espécies e não é a quantidade final já
-determinada. No experimento completo, o plano é comparar 10, 25, 50 e 102
-grupos. A configuração com 102 grupos é uma hipótese relacionada ao número de
-espécies do conjunto, não uma obrigação para um método não supervisionado.
+O número 8 não representa oito espécies e não é uma quantidade universalmente
+ideal. Ele é a melhor configuração entre as alternativas testadas neste
+piloto. Na base completa, ainda será possível comparar quantidades maiores,
+inclusive 25, 50 e 102 grupos. A configuração com 102 grupos é uma hipótese
+relacionada ao número de espécies do conjunto, não uma obrigação para um método
+não supervisionado.
 
 ## 7. Métricas apresentadas
 
@@ -231,7 +238,7 @@ convergir para centroides coincidentes e pertinências uniformes.
 ### 7.2 Pertinência principal
 
 É a média do maior grau de pertinência de cada imagem. Na execução PCA-64 com
-semente 42, o valor foi 0,561. Isso indica associações moderadas e sobreposição
+semente 42, o valor foi 0,600. Isso indica associações moderadas e sobreposição
 relevante entre os grupos.
 
 ### 7.3 Diferença entre as duas maiores pertinências
@@ -255,7 +262,8 @@ Seu intervalo usual vai de -1 a 1:
 - próximo de 0: grupos sobrepostos;
 - negativo: muitas imagens podem estar mais próximas de outro grupo.
 
-A silhueta FCM de aproximadamente 0,082 no PCA-64 é baixa. Isso confirma que
+A silhueta FCM de aproximadamente 0,092 na execução PCA-64 com semente 42 é
+baixa. Isso confirma que
 os padrões se sobrepõem e que os grupos não devem ser tratados como classes
 naturais perfeitamente separadas.
 
@@ -282,9 +290,9 @@ Valores menores são preferíveis porque indicam grupos internamente compactos e
 centroides separados. Se dois centroides quase coincidem, o denominador fica
 próximo de zero e o índice cresce muito.
 
-No PCA-64, os valores ficaram entre aproximadamente 8,76 e 11,38. No PCA-128,
-ficaram entre cerca de 545 mil e 89,7 milhões. Essa diferença é uma evidência
-forte do problema de separação no PCA-128.
+No PCA-64, os valores ficaram entre aproximadamente 3,80 e 4,67. No PCA-128,
+ficaram entre cerca de 10,77 e 1,16 milhão. Essa diferença, especialmente na
+semente 42, é uma evidência do risco de perda de separação no PCA-128.
 
 O Xie–Beni deve ser comparado com cautela quando mudam representação,
 quantidade de grupos ou escala. Ele não substitui a inspeção visual nem a
@@ -299,8 +307,8 @@ entre centroides. Depois são calculados:
 - o índice Rand ajustado, que mede a concordância entre partições;
 - a diferença média entre as matrizes de pertinência alinhadas.
 
-No PCA-64, a concordância dominante média foi 77,7% e o Rand ajustado médio foi
-0,660. Isso representa estabilidade moderada, não perfeita.
+No PCA-64, a concordância dominante média foi 78,6% e o Rand ajustado médio foi
+0,639. Isso representa estabilidade moderada, não perfeita.
 
 ## 8. Como explicar as áreas do dashboard
 
@@ -333,7 +341,7 @@ indício visual, não como reprodução exata do espaço do FCM.
 ### Tamanho dos grupos
 
 Mostra quantas imagens têm cada grupo como atribuição dominante. Na execução
-PCA-64 com semente 42, os grupos possuem entre 36 e 61 imagens. Não há um único
+PCA-64 com semente 42, os grupos possuem entre 41 e 77 imagens. Não há um único
 grupo concentrando quase toda a amostra.
 
 ### Galeria de imagens
@@ -366,6 +374,18 @@ como candidata do piloto. A indicação não afirma que existam exatamente oito
 espécies ou categorias naturais; ela identifica o melhor equilíbrio entre as
 configurações efetivamente testadas.
 
+### Escolha do expoente de fuzzificação
+
+Depois de fixar oito grupos, esta área compara `m=1,10`, `1,15`, `1,20`, `1,25`
+e `1,30`. Valores menores geraram grupos mais rígidos e separados, enquanto
+`m=1,25` e `m=1,30` levaram a centroides quase coincidentes e falta de
+convergência.
+
+`m=1,20` aparece como candidato porque convergiu nas três sementes, preservou
+os oito grupos e obteve a maior concordância entre as soluções numericamente
+válidas. O dashboard destaca que as concordâncias ainda maiores de `m=1,25` e
+`m=1,30` são artificiais e resultam de estados degenerados.
+
 ## 9. Como o agrupamento pode ser melhorado
 
 ### 9.1 Usar a base completa após validar o piloto
@@ -375,8 +395,7 @@ permite testar quantidades maiores de grupos com mais exemplos por grupo.
 
 ### 9.2 Comparar mais configurações
 
-- concentrar a próxima rodada em oito grupos, comparando pequenas variações de
-  `m` próximas de 1,2;
+- manter PCA-64, oito grupos e `m=1,20` como configuração candidata;
 - repetir cada configuração com mais sementes;
 - testar outras quantidades de componentes entre 64 e 128;
 - selecionar configurações com várias métricas, não apenas uma.
@@ -423,12 +442,14 @@ inspecionadas. Elas podem revelar:
 
 O piloto demonstra que o fluxo técnico funciona e que o Fuzzy C-Means consegue
 representar sobreposição entre padrões visuais. Depois de comparar 8, 10, 12 e
-15 grupos, a configuração PCA-64 com 8 grupos é a candidata mais adequada para
-continuar a análise. Ela convergiu nas três sementes, ocupou todos os grupos,
-manteve os centroides separados e apresentou o menor Xie–Beni.
+15 grupos e diferentes expoentes, a configuração PCA-64 com 8 grupos e
+`m=1,20` é a candidata mais adequada para continuar a análise. Ela convergiu
+nas três sementes, ocupou todos os grupos e manteve os centroides separados.
+Entre os expoentes válidos, também apresentou a maior concordância.
 
 Ao mesmo tempo, a silhueta baixa mostra que as imagens não formam grupos
 naturalmente isolados. Portanto, o dashboard deve ser apresentado como uma
-ferramenta de exploração e diagnóstico. A próxima etapa é testar pequenas
-variações de `m` com oito grupos, medir a influência da cor e do fundo e,
-somente depois, executar e validar o experimento na base completa.
+ferramenta de exploração e diagnóstico. Os artefatos principais já foram
+regenerados com a configuração candidata. A próxima etapa é medir a influência
+da cor e do fundo e, somente depois, executar e validar o experimento na base
+completa.
