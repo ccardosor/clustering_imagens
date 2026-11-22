@@ -233,6 +233,12 @@ oferece as opções **Piloto · 500** e **Dataset completo · 8.189**. O dataset
 completo é selecionado inicialmente, e a escolha também pode ser compartilhada
 pelos parâmetros da URL.
 
+Na área principal, **Pontos** preserva a inspeção individual e pode contornar
+imagens ambíguas segundo o limite de `Δ`. **Densidade** agrega regiões da
+projeção para evitar a sobreposição visual das 8.189 imagens. O seletor
+**Grupo em foco** filtra o mapa e a galeria e destaca o mesmo grupo no gráfico
+de barras, que permanece em ordem numérica e mostra as quantidades diretamente.
+
 O app lê os artefatos já calculados e não executa ResNet, PCA ou FCM durante a
 interação. Para instalar somente as dependências do dashboard, sem PyTorch:
 

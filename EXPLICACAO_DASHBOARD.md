@@ -343,12 +343,30 @@ entre execuções.
 - **Concordância entre sementes:** estabilidade após alinhamento.
 - **Convergência:** estabilização numérica da execução selecionada.
 
+### Controles de leitura e foco
+
+O controle **Leitura do mapa** oferece duas interpretações da mesma projeção:
+
+- **Pontos:** cada marca representa uma imagem, a cor indica o grupo FCM
+  dominante e a opacidade representa a pertinência principal. O tamanho e a
+  opacidade mínima diminuem automaticamente quando há milhares de imagens.
+- **Densidade:** as imagens são agregadas em células; cores mais intensas
+  indicam regiões com mais imagens. Nesse modo, a cor representa quantidade,
+  não o grupo, e evita que a sobreposição de 8.189 pontos esconda a estrutura.
+
+O controle **Grupo em foco** filtra simultaneamente o mapa e a galeria. No
+gráfico de barras, o grupo escolhido fica destacado enquanto os demais
+continuam visíveis como contexto. No modo Pontos, **Destacar ambíguas**
+contorna as imagens cujo `Δ` é menor ou igual ao limite escolhido. Como `Δ` é a
+diferença entre as duas maiores pertinências, valores menores indicam uma
+fronteira mais incerta entre grupos.
+
 ### Mapa visual da amostra
 
-Cada ponto representa uma imagem. A cor indica o grupo FCM dominante e a
-opacidade representa a pertinência principal. As duas coordenadas são uma nova
-projeção para visualização; elas não mostram todas as 64 dimensões usadas pelo
-agrupamento.
+As duas coordenadas do mapa são uma nova projeção para visualização; elas não
+mostram todas as 64 dimensões usadas pelo agrupamento. O modo Densidade é a
+leitura inicial do dataset completo, enquanto o modo Pontos permanece mais
+adequado para inspecionar exemplos individuais e a amostra piloto.
 
 Pontos de cores diferentes misturados ajudam a explicar a silhueta baixa. Uma
 separação aparente ou uma sobreposição no gráfico 2D deve ser tratada como
@@ -356,9 +374,10 @@ indício visual, não como reprodução exata do espaço do FCM.
 
 ### Tamanho dos grupos
 
-Mostra quantas imagens têm cada grupo como atribuição dominante. Na execução
-PCA-64 com semente 42, os grupos possuem entre 41 e 77 imagens. Não há um único
-grupo concentrando quase toda a amostra.
+Mostra quantas imagens têm cada grupo como atribuição dominante, em ordem
+numérica, com a quantidade escrita sobre cada barra e o percentual disponível
+ao passar o cursor. O destaque acompanha o **Grupo em foco**, mas as barras não
+são removidas para preservar a comparação da distribuição completa.
 
 ### Galeria de imagens
 

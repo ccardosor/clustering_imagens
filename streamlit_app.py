@@ -15,6 +15,8 @@ from clustering_imagens.visualizacao import (
     carregar_dados_execucao,
     carregar_execucoes,
     descobrir_fontes_dados,
+    filtrar_grupo_visual,
+    preparar_distribuicao_grupos,
     resolver_caminho_imagem,
     rotulo_execucao,
     selecionar_expoente_candidato,
@@ -285,29 +287,98 @@ elif float(metricas["menor_distancia_centroides_quadrada"]) < 1e-4:
         title="Possível degeneração dos grupos",
     )
 
+quantidade_clusters = int(metricas["quantidade_clusters"])
+ordem_grupos = [f"Grupo {indice}" for indice in range(1, quantidade_clusters + 1)]
+
+with st.container(horizontal=True, vertical_alignment="bottom", border=True):
+    modo_mapa = st.segmented_control(
+        "Leitura do mapa",
+        ("Pontos", "Densidade"),
+        default="Densidade" if fonte_selecionada == "completo" else "Pontos",
+        required=True,
+        key="modo_mapa",
+        bind="query-params",
+    )
+    grupo_foco = st.selectbox(
+        "Grupo em foco",
+        ["Todos", *ordem_grupos],
+        key="grupo_foco",
+        bind="query-params",
+        help="Filtra o mapa e a galeria e destaca o mesmo grupo nas barras.",
+    )
+    destacar_ambiguas = st.toggle(
+        "Destacar ambíguas",
+        value=True,
+        key="destacar_ambiguas",
+        disabled=modo_mapa != "Pontos",
+        help="Contorna imagens com pequena diferença entre as duas maiores pertinências.",
+    )
+    limiar_ambiguidade = st.slider(
+        "Limite de ambiguidade (Δ)",
+        min_value=0.01,
+        max_value=0.20,
+        value=0.05,
+        step=0.01,
+        key="limiar_ambiguidade",
+        disabled=modo_mapa != "Pontos" or not destacar_ambiguas,
+        help="Quanto menor o Δ, mais parecidas são as duas maiores pertinências.",
+    )
+
+cluster = None if grupo_foco == "Todos" else int(str(grupo_foco).split()[-1])
 dados_grafico = tabela.assign(
     grupo=tabela["cluster_principal"].map(lambda valor: f"Grupo {int(valor)}")
 )
-contagens_grupos = dados_grafico["grupo"].value_counts()
-distribuicao = pd.DataFrame(
-    {
-        "grupo": contagens_grupos.index.astype(str),
-        "imagens": contagens_grupos.to_numpy(),
-    }
+dados_mapa = filtrar_grupo_visual(dados_grafico, cluster)
+distribuicao = preparar_distribuicao_grupos(tabela, quantidade_clusters)
+distribuicao["em_foco"] = (
+    True if cluster is None else distribuicao["cluster_principal"] == cluster
 )
 
-base_dispersao: Any = alt.Chart(dados_grafico)
-grafico_dispersao = (
-    base_dispersao
-    .mark_circle(size=75)
-    .encode(
-        x=alt.X("componente_1:Q", title="Componente visual 1"),
-        y=alt.Y("componente_2:Q", title="Componente visual 2"),
-        color=alt.Color("grupo:N", title="Grupo"),
+eixo_x = alt.X("componente_1:Q", title="Componente visual 1")
+eixo_y = alt.Y("componente_2:Q", title="Componente visual 2")
+if modo_mapa == "Densidade":
+    base_densidade: Any = alt.Chart(dados_mapa)
+    grafico_mapa: Any = (
+        base_densidade
+        .mark_rect()
+        .encode(
+            x=alt.X(
+                "componente_1:Q",
+                title="Componente visual 1",
+                bin=alt.Bin(maxbins=55),
+            ),
+            y=alt.Y(
+                "componente_2:Q",
+                title="Componente visual 2",
+                bin=alt.Bin(maxbins=45),
+            ),
+            color=alt.Color(
+                "count():Q",
+                title="Imagens por célula",
+                scale=alt.Scale(scheme="viridis"),
+            ),
+            tooltip=[alt.Tooltip("count():Q", title="Imagens na célula")],
+        )
+        .properties(height=420)
+        .interactive()
+    )
+else:
+    tamanho_ponto = 36 if len(dados_mapa) > 2_000 else 72
+    opacidade_minima = 0.16 if len(dados_mapa) > 2_000 else 0.30
+    base_dispersao: Any = alt.Chart(dados_mapa)
+    pontos = base_dispersao.mark_circle(size=tamanho_ponto).encode(
+        x=eixo_x,
+        y=eixo_y,
+        color=alt.Color(
+            "grupo:N",
+            title="Grupo",
+            sort=ordem_grupos,
+            scale=alt.Scale(domain=ordem_grupos),
+        ),
         opacity=alt.Opacity(
             "pertinencia_principal:Q",
             title="Pertinência",
-            scale=alt.Scale(domain=[0, 1], range=[0.3, 1]),
+            scale=alt.Scale(domain=[0, 1], range=[opacidade_minima, 0.95]),
         ),
         tooltip=[
             alt.Tooltip("caminho_relativo:N", title="Imagem"),
@@ -318,21 +389,68 @@ grafico_dispersao = (
             alt.Tooltip("diferenca_top2:Q", title="Diferença top 2", format=".3f"),
         ],
     )
-    .properties(height=420)
-    .interactive()
-)
+    grafico_mapa = pontos
+    if destacar_ambiguas:
+        dados_ambiguos = dados_mapa[
+            dados_mapa["diferenca_top2"] <= limiar_ambiguidade
+        ]
+        base_ambiguas: Any = alt.Chart(dados_ambiguos)
+        contornos = (
+            base_ambiguas
+            .mark_point(
+                shape="circle",
+                filled=False,
+                size=tamanho_ponto * 2.5,
+                stroke="#F2C94C",
+                strokeWidth=1.8,
+            )
+            .encode(
+                x=eixo_x,
+                y=eixo_y,
+                tooltip=[
+                    alt.Tooltip("caminho_relativo:N", title="Imagem ambígua"),
+                    alt.Tooltip("grupo:N", title="Grupo dominante"),
+                    alt.Tooltip(
+                        "diferenca_top2:Q", title="Diferença top 2", format=".3f"
+                    ),
+                ],
+            )
+        )
+        grafico_mapa = pontos + contornos
+    grafico_mapa = grafico_mapa.properties(height=420).interactive()
+
+limite_eixo_grupos = max(float(distribuicao["imagens"].max()) * 1.14, 1.0)
 base_distribuicao: Any = alt.Chart(distribuicao)
-grafico_distribuicao = (
-    base_distribuicao
-    .mark_bar()
-    .encode(
-        x=alt.X("grupo:N", title="Grupo", sort="-y"),
-        y=alt.Y("imagens:Q", title="Quantidade de imagens"),
-        color=alt.Color("grupo:N", title="Grupo", legend=None),
-        tooltip=["grupo:N", alt.Tooltip("imagens:Q", title="Imagens")],
-    )
-    .properties(height=420)
+barras_distribuicao = base_distribuicao.mark_bar().encode(
+    x=alt.X("grupo:N", title="Grupo", sort=ordem_grupos),
+    y=alt.Y(
+        "imagens:Q",
+        title="Quantidade de imagens",
+        scale=alt.Scale(domain=[0, limite_eixo_grupos]),
+    ),
+    color=alt.Color(
+        "grupo:N",
+        title="Grupo",
+        legend=None,
+        sort=ordem_grupos,
+        scale=alt.Scale(domain=ordem_grupos),
+    ),
+    opacity=alt.condition("datum.em_foco", alt.value(1.0), alt.value(0.28)),
+    tooltip=[
+        alt.Tooltip("grupo:N", title="Grupo"),
+        alt.Tooltip("imagens:Q", title="Imagens"),
+        alt.Tooltip("percentual:Q", title="Percentual", format=".1%"),
+    ],
 )
+rotulos_distribuicao = base_distribuicao.mark_text(dy=-9).encode(
+    x=alt.X("grupo:N", sort=ordem_grupos),
+    y=alt.Y("imagens:Q"),
+    text=alt.Text("rotulo_quantidade:N"),
+    opacity=alt.condition("datum.em_foco", alt.value(1.0), alt.value(0.35)),
+)
+grafico_distribuicao = (
+    barras_distribuicao + rotulos_distribuicao
+).properties(height=420)
 
 coluna_dispersao, coluna_distribuicao = st.columns((2, 1))
 with coluna_dispersao.container(border=True):
@@ -343,13 +461,37 @@ with coluna_dispersao.container(border=True):
     )
     st.subheader(titulo_mapa)
     st.altair_chart(
-        grafico_dispersao,
+        grafico_mapa,
         key="mapa_visual",
         alt=(
-            f"Projeção bidimensional de {quantidade_fonte_ativa} flores "
-            "colorida pelo grupo FCM dominante"
+            f"Projeção bidimensional de {len(dados_mapa)} flores em modo "
+            f"{str(modo_mapa).lower()}"
         ),
     )
+    quantidade_mapa_formatada = f"{len(dados_mapa):,}".replace(",", ".")
+    if modo_mapa == "Densidade":
+        st.caption(
+            f"Exibindo {quantidade_mapa_formatada} imagens. Cores mais intensas "
+            "indicam regiões com mais imagens; nesta leitura, a cor não "
+            "representa o grupo."
+        )
+    else:
+        quantidade_ambiguas = int(
+            (dados_mapa["diferenca_top2"] <= limiar_ambiguidade).sum()
+        )
+        quantidade_ambiguas_formatada = f"{quantidade_ambiguas:,}".replace(
+            ",", "."
+        )
+        complemento_ambiguas = (
+            f" · {quantidade_ambiguas_formatada} contornadas como ambíguas (Δ ≤ "
+            f"{limiar_ambiguidade:.2f})"
+            if destacar_ambiguas
+            else ""
+        )
+        st.caption(
+            f"Exibindo {quantidade_mapa_formatada} pontos; tamanho e opacidade "
+            f"são ajustados para reduzir sobreposição{complemento_ambiguas}."
+        )
 with coluna_distribuicao.container(border=True):
     st.subheader("Tamanho dos grupos")
     st.altair_chart(
@@ -359,6 +501,10 @@ with coluna_distribuicao.container(border=True):
     )
 
 st.header("Galeria de imagens")
+st.caption(
+    f"Filtro conectado ao mapa: **{grupo_foco}**. A seleção abaixo define quais "
+    "exemplos serão priorizados."
+)
 with st.container(horizontal=True, vertical_alignment="bottom"):
     modo_galeria = st.segmented_control(
         "Seleção",
@@ -369,15 +515,6 @@ with st.container(horizontal=True, vertical_alignment="bottom"):
         required=True,
         key="modo_galeria",
     )
-    opcoes_cluster: list[str | int] = [
-        "Todos",
-        *range(1, int(metricas["quantidade_clusters"]) + 1),
-    ]
-    cluster_selecionado = st.selectbox(
-        "Grupo",
-        opcoes_cluster,
-        key="cluster_galeria",
-    )
     quantidade_galeria = st.slider(
         "Quantidade",
         min_value=4,
@@ -386,8 +523,6 @@ with st.container(horizontal=True, vertical_alignment="bottom"):
         step=4,
         key="quantidade_galeria",
     )
-
-cluster = None if cluster_selecionado == "Todos" else int(cluster_selecionado)
 if modo_galeria == "Instáveis":
     imagens_galeria = selecionar_galeria_instavel(
         estabilidade,

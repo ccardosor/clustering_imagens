@@ -7,6 +7,8 @@ import pytest
 
 from clustering_imagens.visualizacao import (
     descobrir_fontes_dados,
+    filtrar_grupo_visual,
+    preparar_distribuicao_grupos,
     resolver_caminho_imagem,
     selecionar_expoente_candidato,
     selecionar_galeria,
@@ -106,3 +108,22 @@ def test_descobrir_fontes_dados_encontra_piloto_e_completo(tmp_path: Path) -> No
 
     assert fontes == {"piloto": piloto, "completo": completo}
     assert descobrir_fontes_dados(completo) == fontes
+
+
+def test_filtrar_grupo_visual_preserva_tabela_original() -> None:
+    tabela = criar_tabela()
+
+    resultado = filtrar_grupo_visual(tabela, 1)
+
+    assert resultado["caminho_relativo"].tolist() == ["a.jpg", "c.jpg"]
+    assert len(tabela) == 3
+    assert filtrar_grupo_visual(tabela, None).equals(tabela)
+
+
+def test_preparar_distribuicao_grupos_usa_ordem_numerica_e_percentual() -> None:
+    resultado = preparar_distribuicao_grupos(criar_tabela(), 3)
+
+    assert resultado["grupo"].tolist() == ["Grupo 1", "Grupo 2", "Grupo 3"]
+    assert resultado["imagens"].tolist() == [2, 1, 0]
+    assert resultado["percentual"].tolist() == pytest.approx([2 / 3, 1 / 3, 0])
+    assert resultado["rotulo_quantidade"].tolist() == ["2", "1", "0"]

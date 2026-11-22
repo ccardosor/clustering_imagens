@@ -155,6 +155,44 @@ def selecionar_galeria_instavel(
     )
 
 
+def filtrar_grupo_visual(
+    tabela: pd.DataFrame, grupo: int | None
+) -> pd.DataFrame:
+    """Filtra a projeção pelo grupo dominante sem alterar a tabela original."""
+
+    if "cluster_principal" not in tabela:
+        raise ValueError("A coluna 'cluster_principal' não foi encontrada.")
+    if grupo is None:
+        return tabela.copy()
+    return tabela[tabela["cluster_principal"] == grupo].copy()
+
+
+def preparar_distribuicao_grupos(
+    tabela: pd.DataFrame, quantidade_clusters: int
+) -> pd.DataFrame:
+    """Calcula quantidade e percentual por grupo em ordem numérica."""
+
+    if quantidade_clusters <= 0:
+        raise ValueError("A quantidade de grupos deve ser maior que zero.")
+    if "cluster_principal" not in tabela:
+        raise ValueError("A coluna 'cluster_principal' não foi encontrada.")
+
+    grupos = pd.Index(range(1, quantidade_clusters + 1), name="cluster_principal")
+    contagens = tabela["cluster_principal"].value_counts().reindex(grupos, fill_value=0)
+    total = int(contagens.sum())
+    distribuicao = contagens.rename("imagens").reset_index()
+    distribuicao["grupo"] = distribuicao["cluster_principal"].map(
+        lambda valor: f"Grupo {int(valor)}"
+    )
+    distribuicao["percentual"] = (
+        distribuicao["imagens"] / total if total else 0.0
+    )
+    distribuicao["rotulo_quantidade"] = distribuicao["imagens"].map(
+        lambda valor: f"{int(valor):,}".replace(",", ".")
+    )
+    return distribuicao
+
+
 def selecionar_quantidade_candidata(resumo: pd.DataFrame) -> int | None:
     """Seleciona a menor Xie–Beni entre configurações numericamente válidas."""
 
