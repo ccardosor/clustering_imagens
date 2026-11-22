@@ -77,6 +77,7 @@ combina o índice com convergência, silhueta, estabilidade e inspeção visual.
 ## Configuração promovida e próxima etapa
 
 A configuração principal do projeto foi atualizada para PCA-64, oito grupos e
-`m=1,20`, e os artefatos principais foram regenerados. Os próximos experimentos
-devem medir a influência da cor e do fundo antes da expansão para as 8.189
-imagens.
+`m=1,20`, e os artefatos principais foram regenerados. A execução sobre as
+8.189 imagens também foi concluída e está em
+[`RESULTADOS_DATASET_COMPLETO.md`](RESULTADOS_DATASET_COMPLETO.md). O próximo
+experimento deve medir a influência da cor e do fundo.

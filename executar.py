@@ -13,11 +13,42 @@ import venv
 
 RAIZ = Path(__file__).resolve().parent
 
+MODULOS_POR_PERFIL = {
+    "base": ("numpy", "pandas", "PIL", "scipy", "sklearn", "streamlit"),
+    "extracao": (
+        "numpy", "pandas", "PIL", "scipy", "sklearn", "streamlit",
+        "torch", "torchvision",
+    ),
+    "dev": (
+        "numpy", "pandas", "PIL", "scipy", "sklearn", "streamlit",
+        "pytest", "ty",
+    ),
+}
+
 
 def executar(comando: list[str], simular: bool, ambiente=None) -> None:
     print(shlex.join(comando), flush=True)
     if not simular:
         subprocess.run(comando, cwd=RAIZ, env=ambiente, check=True)
+
+
+def dependencias_disponiveis(python: Path, perfil: str) -> bool:
+    """Verifica os módulos do perfil sem depender de marcadores locais."""
+
+    modulos = MODULOS_POR_PERFIL[perfil]
+    codigo = (
+        "import importlib.util,sys; "
+        f"m={modulos!r}; "
+        "sys.exit(0 if all(importlib.util.find_spec(x) for x in m) else 1)"
+    )
+    verificacao = subprocess.run(
+        [str(python), "-c", codigo],
+        cwd=RAIZ,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return verificacao.returncode == 0
 
 
 def principal() -> int:
@@ -55,7 +86,9 @@ def principal() -> int:
                          "--arquivo-amostra", str(amostra),
                          "--arquivo-saida", str(caracteristicas)],
             "piloto": ["--arquivo-caracteristicas", str(caracteristicas),
-                       "--diretorio-saida", str(artefatos / "piloto" / "fcm")],
+                       "--diretorio-saida", str(artefatos / "piloto" / "fcm"),
+                       "--arquivo-cache-representacao",
+                       str(artefatos / "piloto" / "representacao_pca.npz")],
             "experimentos": ["--arquivo-caracteristicas", str(caracteristicas),
                              "--diretorio-saida", str(artefatos / "experimentos")],
             "avaliacao-clusters": [
@@ -96,9 +129,43 @@ def principal() -> int:
             print("Criando ambiente .venv...", flush=True)
             venv.EnvBuilder(with_pip=True).create(RAIZ / ".venv")
         if opcoes.reinstalar or not marcador.exists():
-            pacote = "." if perfil == "base" else f".[{perfil}]"
-            executar([str(python), "-m", "pip", "install", "-e", pacote],
-                     opcoes.simular)
+            ambiente_pronto = (
+                not opcoes.simular
+                and not opcoes.reinstalar
+                and dependencias_disponiveis(python, perfil)
+            )
+            if ambiente_pronto:
+                print(
+                    f"Dependências do perfil '{perfil}' já estão disponíveis.",
+                    flush=True,
+                )
+            elif not opcoes.simular:
+                verificacao_pip = subprocess.run(
+                    [str(python), "-m", "pip", "--version"],
+                    cwd=RAIZ,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if verificacao_pip.returncode != 0:
+                    executar(
+                        [str(python), "-m", "ensurepip", "--upgrade"],
+                        simular=False,
+                    )
+            if not ambiente_pronto:
+                pacote = "." if perfil == "base" else f".[{perfil}]"
+                executar(
+                    [
+                        str(python),
+                        "-m",
+                        "pip",
+                        "install",
+                        "--no-build-isolation",
+                        "-e",
+                        pacote,
+                    ],
+                    opcoes.simular,
+                )
             if not opcoes.simular:
                 marcador.touch()
         for etapa, args in comandos:

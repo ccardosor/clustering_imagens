@@ -33,6 +33,17 @@ class MetadadosExtracao:
     versao_torchvision: str
 
 
+@dataclass(frozen=True, slots=True)
+class EstadoExtracao:
+    """Estado mínimo necessário para retomar uma extração interrompida."""
+
+    sha256_amostra: str
+    diretorio_imagens: str
+    quantidade_total: int
+    quantidade_processada: int
+    dimensao_caracteristicas: int
+
+
 class ConjuntoImagens:
     """Dataset simples e serializável para carregadores com múltiplos processos."""
 
@@ -93,6 +104,67 @@ def validar_caminhos_imagens(diretorio_imagens: Path, caminhos: Sequence[str]) -
         )
 
 
+def caminhos_extracao_parcial(arquivo_saida: Path) -> tuple[Path, Path]:
+    """Retorna os arquivos usados para a matriz parcial e seu estado."""
+
+    prefixo = arquivo_saida.with_suffix("")
+    return (
+        prefixo.with_name(f"{prefixo.name}.parcial.npy"),
+        prefixo.with_name(f"{prefixo.name}.parcial.json"),
+    )
+
+
+def salvar_estado_extracao(caminho: Path, estado: EstadoExtracao) -> None:
+    """Grava o progresso de forma atômica depois de persistir cada lote."""
+
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    temporario = caminho.with_suffix(f"{caminho.suffix}.tmp")
+    temporario.write_text(
+        json.dumps(asdict(estado), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    temporario.replace(caminho)
+
+
+def carregar_estado_extracao(
+    caminho_matriz: Path,
+    caminho_estado: Path,
+    sha256_amostra: str,
+    diretorio_imagens: Path,
+    quantidade_total: int,
+) -> EstadoExtracao | None:
+    """Valida um checkpoint existente antes de permitir sua retomada."""
+
+    if not caminho_matriz.exists() and not caminho_estado.exists():
+        return None
+    if not caminho_matriz.is_file() or not caminho_estado.is_file():
+        raise RuntimeError(
+            "Checkpoint de extração incompleto. Remova os arquivos '.parcial' "
+            "ou restaure o par .npy/.json antes de continuar."
+        )
+    try:
+        conteudo = json.loads(caminho_estado.read_text(encoding="utf-8"))
+        estado = EstadoExtracao(**conteudo)
+    except (OSError, json.JSONDecodeError, TypeError) as erro:
+        raise RuntimeError(f"Checkpoint de extração inválido: {erro}") from erro
+
+    esperado = (sha256_amostra, str(diretorio_imagens), quantidade_total)
+    observado = (
+        estado.sha256_amostra,
+        estado.diretorio_imagens,
+        estado.quantidade_total,
+    )
+    if observado != esperado:
+        raise RuntimeError(
+            "O checkpoint pertence a outra amostra ou diretório de imagens."
+        )
+    if not 0 < estado.quantidade_processada <= quantidade_total:
+        raise RuntimeError("O checkpoint informa uma quantidade processada inválida.")
+    if estado.dimensao_caracteristicas <= 0:
+        raise RuntimeError("O checkpoint informa uma dimensão inválida.")
+    return estado
+
+
 def extrair_caracteristicas(
     diretorio_imagens: Path,
     arquivo_amostra: Path,
@@ -119,6 +191,7 @@ def extrair_caracteristicas(
     arquivo_amostra = arquivo_amostra.resolve()
     arquivo_saida = arquivo_saida.resolve()
     diretorio_cache_modelos = diretorio_cache_modelos.resolve()
+    arquivo_saida.parent.mkdir(parents=True, exist_ok=True)
     diretorio_cache_modelos.mkdir(parents=True, exist_ok=True)
     torch.hub.set_dir(str(diretorio_cache_modelos))
     caminhos = ler_caminhos_amostra(arquivo_amostra)
@@ -134,9 +207,22 @@ def extrair_caracteristicas(
     pesos = ResNet50_Weights.IMAGENET1K_V2
     transformacao = pesos.transforms()
 
+    sha256_amostra = calcular_sha256(arquivo_amostra)
+    caminho_matriz_parcial, caminho_estado_parcial = caminhos_extracao_parcial(
+        arquivo_saida
+    )
+    estado = carregar_estado_extracao(
+        caminho_matriz_parcial,
+        caminho_estado_parcial,
+        sha256_amostra,
+        diretorio_imagens,
+        len(caminhos),
+    )
+    quantidade_processada = estado.quantidade_processada if estado else 0
+    caminhos_pendentes = caminhos[quantidade_processada:]
     conjunto = cast(
         "Dataset[object]",
-        ConjuntoImagens(diretorio_imagens, caminhos, transformacao),
+        ConjuntoImagens(diretorio_imagens, caminhos_pendentes, transformacao),
     )
     carregador = DataLoader(
         conjunto,
@@ -145,37 +231,69 @@ def extrair_caracteristicas(
         num_workers=trabalhadores,
         pin_memory=dispositivo_efetivo.startswith("cuda"),
     )
-    modelo = resnet50(weights=pesos)
-    modelo.fc = torch.nn.Identity()
-    modelo.eval().to(dispositivo_efetivo)
+    matriz = None
+    if estado is not None:
+        matriz = np.lib.format.open_memmap(
+            caminho_matriz_parcial,
+            mode="r+",
+            dtype=np.float32,
+            shape=(len(caminhos), estado.dimensao_caracteristicas),
+        )
+        if matriz.shape != (len(caminhos), estado.dimensao_caracteristicas):
+            raise RuntimeError("A matriz parcial não corresponde ao checkpoint.")
 
-    lotes: list[np.ndarray] = []
-    with torch.inference_mode():
-        for lote in carregador:
-            vetores = modelo(lote.to(dispositivo_efetivo, non_blocking=True))
-            lotes.append(vetores.cpu().numpy().astype(np.float32, copy=False))
+    if caminhos_pendentes:
+        modelo = resnet50(weights=pesos)
+        modelo.fc = torch.nn.Identity()
+        modelo.eval().to(dispositivo_efetivo)
 
-    matriz = np.concatenate(lotes, axis=0)
+        with torch.inference_mode():
+            for indice_lote, lote in enumerate(carregador, start=1):
+                vetores = modelo(lote.to(dispositivo_efetivo, non_blocking=True))
+                vetores_numpy = vetores.cpu().numpy().astype(np.float32, copy=False)
+                if matriz is None:
+                    matriz = np.lib.format.open_memmap(
+                        caminho_matriz_parcial,
+                        mode="w+",
+                        dtype=np.float32,
+                        shape=(len(caminhos), vetores_numpy.shape[1]),
+                    )
+                limite = quantidade_processada + vetores_numpy.shape[0]
+                matriz[quantidade_processada:limite] = vetores_numpy
+                matriz.flush()
+                quantidade_processada = limite
+                salvar_estado_extracao(
+                    caminho_estado_parcial,
+                    EstadoExtracao(
+                        sha256_amostra=sha256_amostra,
+                        diretorio_imagens=str(diretorio_imagens),
+                        quantidade_total=len(caminhos),
+                        quantidade_processada=quantidade_processada,
+                        dimensao_caracteristicas=matriz.shape[1],
+                    ),
+                )
+                if indice_lote % 10 == 0 or quantidade_processada == len(caminhos):
+                    print(
+                        f"Extração: {quantidade_processada}/{len(caminhos)} imagens.",
+                        flush=True,
+                    )
+
+    if matriz is None:
+        raise RuntimeError("A extração não produziu nem encontrou uma matriz parcial.")
     if matriz.shape[0] != len(caminhos):
         raise RuntimeError("A quantidade de vetores não corresponde à quantidade de imagens.")
     if not np.isfinite(matriz).all():
         raise RuntimeError("A matriz de características contém valores não finitos.")
 
-    arquivo_saida.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(
-        arquivo_saida,
-        caracteristicas=matriz,
-        caminhos=np.asarray(caminhos),
-    )
-
+    dimensao_caracteristicas = matriz.shape[1]
     metadados = MetadadosExtracao(
         arquivo_amostra=str(arquivo_amostra),
-        sha256_amostra=calcular_sha256(arquivo_amostra),
+        sha256_amostra=sha256_amostra,
         diretorio_imagens=str(diretorio_imagens),
         arquivo_caracteristicas=str(arquivo_saida),
         diretorio_cache_modelos=str(diretorio_cache_modelos),
-        quantidade_imagens=matriz.shape[0],
-        dimensao_caracteristicas=matriz.shape[1],
+        quantidade_imagens=len(caminhos),
+        dimensao_caracteristicas=dimensao_caracteristicas,
         pesos="ResNet50_Weights.IMAGENET1K_V2",
         preprocessamento=repr(transformacao),
         dispositivo=dispositivo_efetivo,
@@ -184,9 +302,26 @@ def extrair_caracteristicas(
         versao_torchvision=torchvision.__version__,
     )
     destino_metadados = arquivo_saida.with_suffix(".json")
-    with destino_metadados.open("w", encoding="utf-8") as arquivo:
-        json.dump(asdict(metadados), arquivo, ensure_ascii=False, indent=2)
-        arquivo.write("\n")
+    saida_temporaria = arquivo_saida.with_suffix(f"{arquivo_saida.suffix}.tmp")
+    metadados_temporarios = destino_metadados.with_suffix(
+        f"{destino_metadados.suffix}.tmp"
+    )
+    with saida_temporaria.open("wb") as arquivo:
+        np.savez_compressed(
+            arquivo,
+            caracteristicas=matriz,
+            caminhos=np.asarray(caminhos),
+        )
+    metadados_temporarios.write_text(
+        json.dumps(asdict(metadados), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    saida_temporaria.replace(arquivo_saida)
+    metadados_temporarios.replace(destino_metadados)
+    matriz.flush()
+    del matriz
+    caminho_matriz_parcial.unlink()
+    caminho_estado_parcial.unlink()
     return metadados
 
 

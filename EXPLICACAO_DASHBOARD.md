@@ -22,6 +22,12 @@ O fluxo usado no piloto é:
 6. comparar o resultado com K-Means e entre diferentes sementes;
 7. inspecionar métricas e imagens no dashboard Streamlit.
 
+Depois da seleção dos parâmetros, o mesmo fluxo foi executado sobre as 8.189
+imagens. A linha de base completa usa PCA-64, oito grupos e `m=1,20`, convergiu
+nas três sementes e está documentada em
+[`RESULTADOS_DATASET_COMPLETO.md`](RESULTADOS_DATASET_COMPLETO.md). O dashboard
+pode abrir o piloto ou a base completa conforme o arquivo de configuração.
+
 ## 2. Por que utilizar uma amostra de 500 imagens?
 
 O conjunto possui 8.189 imagens válidas, mas o primeiro objetivo era validar o
@@ -44,8 +50,8 @@ durante a fase em que parâmetros e código ainda estavam sendo corrigidos.
 
 A amostra foi sorteada com semente fixa e contém caminhos únicos. Portanto, o
 piloto pode ser reproduzido. Entretanto, 500 imagens não garantem que todos os
-padrões da base completa estejam representados. As conclusões atuais são do
-piloto e devem ser confirmadas no conjunto integral.
+padrões da base completa estejam representados. Por isso, as conclusões do
+piloto foram posteriormente verificadas no conjunto integral.
 
 ## 3. Algoritmos utilizados
 
@@ -135,8 +141,10 @@ No piloto inicial, valores tradicionais como 1,5 e 2,0 fizeram os centroides
 se aproximarem e as pertinências ficarem quase uniformes. Depois de selecionar
 8 grupos, foram comparados `m=1,10`, `1,15`, `1,20`, `1,25` e `1,30` em três
 sementes. O valor 1,2 preservou os 8 grupos, convergiu nas três execuções e
-apresentou a maior estabilidade entre as soluções numericamente válidas. Ele
-continua sendo uma hipótese experimental a validar na base completa.
+apresentou a maior estabilidade entre as soluções numericamente válidas. Na
+base completa, a configuração convergiu nas três sementes após ampliar o limite
+para 1.000 iterações, mas ainda precisa ser comparada com tratamentos de cor e
+fundo.
 
 O K-Means continua sendo executado sobre a mesma representação como uma
 referência de agrupamento rígido.
@@ -388,10 +396,12 @@ válidas. O dashboard destaca que as concordâncias ainda maiores de `m=1,25` e
 
 ## 9. Como o agrupamento pode ser melhorado
 
-### 9.1 Usar a base completa após validar o piloto
+### 9.1 Consolidar a execução sobre a base completa
 
-Executar a extração para as 8.189 imagens aumenta a diversidade observada e
-permite testar quantidades maiores de grupos com mais exemplos por grupo.
+A extração das 8.189 imagens foi concluída. A solução preservou os oito grupos,
+convergiu nas três sementes e apresentou estabilidade dominante média de
+75,0%. Como 25,0% das imagens mudaram de grupo em alguma semente, a inspeção de
+instabilidade continua necessária.
 
 ### 9.2 Comparar mais configurações
 
@@ -449,7 +459,7 @@ Entre os expoentes válidos, também apresentou a maior concordância.
 
 Ao mesmo tempo, a silhueta baixa mostra que as imagens não formam grupos
 naturalmente isolados. Portanto, o dashboard deve ser apresentado como uma
-ferramenta de exploração e diagnóstico. Os artefatos principais já foram
-regenerados com a configuração candidata. A próxima etapa é medir a influência
-da cor e do fundo e, somente depois, executar e validar o experimento na base
-completa.
+ferramenta de exploração e diagnóstico. A base completa já foi processada e
+validada numericamente, com convergência nas três sementes. A próxima etapa é
+medir a influência da cor e do fundo e comparar a coerência visual das novas
+representações com esta linha de base.

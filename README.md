@@ -9,9 +9,11 @@ Projeto de agrupamento visual não supervisionado para as 8.189 imagens JPEG dis
 - [Análise visual dos grupos do piloto](ANALISE_VISUAL_PILOTO.md)
 - [Comparação da quantidade de grupos](RESULTADOS_QUANTIDADE_GRUPOS.md)
 - [Comparação do expoente de fuzzificação](RESULTADOS_FUZZIFICACAO.md)
+- [Resultados sobre o dataset completo](RESULTADOS_DATASET_COMPLETO.md)
 - [Guia de explicação do dashboard](EXPLICACAO_DASHBOARD.md)
 
-O primeiro marco é validar o fluxo completo com uma amostra reproduzível de 500 imagens.
+O primeiro marco foi validar o fluxo completo com uma amostra reproduzível de
+500 imagens; a linha de base sobre as 8.189 imagens também já foi concluída.
 
 ## Execução rápida
 
@@ -50,8 +52,30 @@ Você também pode escolher outro arquivo com `--config minha_configuracao.toml`
 | `python executar.py testes` | Instala dependências de teste e roda a suíte |
 
 Use `--reinstalar` para atualizar a instalação após mudar dependências.
-Cada execução do pipeline recalcula as etapas e sobrescreve seus resultados.
-Para repetir somente uma etapa, use seu comando específico.
+Para repetir somente uma etapa, use seu comando específico. A extração mantém
+um checkpoint por lote e pode ser retomada após uma interrupção. As grades de
+experimentos também reutilizam a representação PCA quando características e
+parâmetros não mudaram.
+
+## Execução sobre as 8.189 imagens
+
+`configuracao_completa.toml` mantém a execução integral separada do piloto em
+`artefatos/completo`. Para gerar somente a configuração candidata, sem repetir
+toda a seleção de hiperparâmetros:
+
+```powershell
+python executar.py inventario --config configuracao_completa.toml
+python executar.py extracao --config configuracao_completa.toml
+python executar.py experimentos --config configuracao_completa.toml
+python executar.py dashboard --config configuracao_completa.toml
+```
+
+A configuração completa usa PCA-64, oito grupos, `m=1,20` e sementes 42, 123 e
+2026. Se a extração for interrompida, execute novamente o mesmo comando: o
+processamento continuará depois do último lote persistido. O arquivo final
+`.npz` só substitui o checkpoint após a validação de todas as características.
+Os resultados observados estão em
+[`RESULTADOS_DATASET_COMPLETO.md`](RESULTADOS_DATASET_COMPLETO.md).
 
 ## Comandos individuais
 

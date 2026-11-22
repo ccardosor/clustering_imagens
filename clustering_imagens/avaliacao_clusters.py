@@ -121,6 +121,9 @@ def executar_avaliacao_clusters(
                 expoente_fuzzificacao=expoente_fuzzificacao,
                 semente=semente,
                 semente_pca=semente_pca,
+                arquivo_cache_representacao=(
+                    diretorio_saida / f"representacao_pca_{componentes_pca:03}.npz"
+                ),
             )
             linha = asdict(metricas)
             linha["diretorio_execucao"] = diretorio_execucao.relative_to(

@@ -93,6 +93,71 @@ def preparar_representacao(
     return representacao, variancia_explicada
 
 
+def carregar_ou_preparar_representacao(
+    arquivo_caracteristicas: Path,
+    componentes_pca: int | None,
+    semente_pca: int,
+    arquivo_cache: Path | None = None,
+) -> tuple[np.ndarray, list[str], float | None, int]:
+    """Reutiliza uma representação PCA quando a origem e os parâmetros coincidem."""
+
+    origem = arquivo_caracteristicas.resolve()
+    estado_origem = origem.stat()
+    componentes_registrados = componentes_pca if componentes_pca is not None else -1
+    if arquivo_cache is not None and arquivo_cache.is_file():
+        try:
+            with np.load(arquivo_cache) as dados_cache:
+                cache_valido = (
+                    str(dados_cache["arquivo_caracteristicas"].item()) == str(origem)
+                    and int(dados_cache["tamanho_arquivo"].item())
+                    == estado_origem.st_size
+                    and int(dados_cache["modificacao_ns"].item())
+                    == estado_origem.st_mtime_ns
+                    and int(dados_cache["componentes_pca"].item())
+                    == componentes_registrados
+                    and int(dados_cache["semente_pca"].item()) == semente_pca
+                )
+                if cache_valido:
+                    representacao = dados_cache["representacao"]
+                    caminhos = dados_cache["caminhos"].astype(str).tolist()
+                    variancia_cache = float(dados_cache["variancia_explicada"].item())
+                    variancia = None if np.isnan(variancia_cache) else variancia_cache
+                    dimensao_entrada = int(dados_cache["dimensao_entrada"].item())
+                    if representacao.shape[0] != len(caminhos):
+                        raise ValueError(
+                            "Representação e caminhos do cache têm tamanhos diferentes."
+                        )
+                    return representacao, caminhos, variancia, dimensao_entrada
+        except (KeyError, OSError, ValueError):
+            pass
+
+    with np.load(origem) as dados:
+        caracteristicas = dados["caracteristicas"]
+        caminhos = dados["caminhos"].astype(str).tolist()
+    if caracteristicas.shape[0] != len(caminhos):
+        raise ValueError("Características e caminhos têm quantidades diferentes.")
+    representacao, variancia = preparar_representacao(
+        caracteristicas, componentes_pca, semente_pca
+    )
+    dimensao_entrada = caracteristicas.shape[1]
+
+    if arquivo_cache is not None:
+        arquivo_cache.parent.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(
+            arquivo_cache,
+            representacao=representacao,
+            caminhos=np.asarray(caminhos),
+            variancia_explicada=np.nan if variancia is None else variancia,
+            dimensao_entrada=dimensao_entrada,
+            arquivo_caracteristicas=str(origem),
+            tamanho_arquivo=estado_origem.st_size,
+            modificacao_ns=estado_origem.st_mtime_ns,
+            componentes_pca=componentes_registrados,
+            semente_pca=semente_pca,
+        )
+    return representacao, caminhos, variancia, dimensao_entrada
+
+
 def calcular_distancias_quadradas(
     dados: np.ndarray, centroides: np.ndarray
 ) -> np.ndarray:
@@ -327,17 +392,17 @@ def executar_piloto(
     maximo_iteracoes: int = 300,
     tolerancia: float = 1e-5,
     inicializacao: str = "kmeans++",
+    arquivo_cache_representacao: Path | None = None,
 ) -> MetricasPiloto:
     """Executa preparação, FCM, avaliação e exportação do piloto."""
 
-    with np.load(arquivo_caracteristicas) as dados:
-        caracteristicas = dados["caracteristicas"]
-        caminhos = dados["caminhos"].astype(str).tolist()
-    if caracteristicas.shape[0] != len(caminhos):
-        raise ValueError("Características e caminhos têm quantidades diferentes.")
-
-    representacao, variancia = preparar_representacao(
-        caracteristicas, componentes_pca, semente_pca
+    representacao, caminhos, variancia, dimensao_entrada = (
+        carregar_ou_preparar_representacao(
+            arquivo_caracteristicas,
+            componentes_pca,
+            semente_pca,
+            arquivo_cache_representacao,
+        )
     )
     resultado = fuzzy_c_means(
         representacao,
@@ -378,7 +443,7 @@ def executar_piloto(
 
     metricas = MetricasPiloto(
         quantidade_imagens=representacao.shape[0],
-        dimensao_entrada=caracteristicas.shape[1],
+        dimensao_entrada=dimensao_entrada,
         dimensao_representacao=representacao.shape[1],
         componentes_pca=componentes_pca,
         variancia_explicada_pca=variancia,
@@ -463,6 +528,7 @@ def criar_analisador_argumentos() -> argparse.ArgumentParser:
         choices=("kmeans++", "pertinencias_aleatorias"),
         default="kmeans++",
     )
+    analisador.add_argument("--arquivo-cache-representacao", type=Path)
     return analisador
 
 
@@ -482,6 +548,7 @@ def principal(argumentos: Sequence[str] | None = None) -> int:
         maximo_iteracoes=opcoes.maximo_iteracoes,
         tolerancia=opcoes.tolerancia,
         inicializacao=opcoes.inicializacao,
+        arquivo_cache_representacao=opcoes.arquivo_cache_representacao,
     )
     print(json.dumps(asdict(metricas), ensure_ascii=False, indent=2))
     return 0

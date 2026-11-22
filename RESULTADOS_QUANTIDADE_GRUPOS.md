@@ -89,6 +89,7 @@ observado entre:
 As variações do expoente de fuzzificação já foram testadas e estão documentadas
 em [`RESULTADOS_FUZZIFICACAO.md`](RESULTADOS_FUZZIFICACAO.md). `m=1,20`
 permaneceu como candidato. PCA-64, oito grupos e `m=1,20` já foram promovidos
-para os artefatos principais. O próximo passo é medir a influência da cor e do
-fundo antes de expandir o processamento para o dataset completo.
+para os artefatos principais. O dataset completo também foi processado, como
+registrado em [`RESULTADOS_DATASET_COMPLETO.md`](RESULTADOS_DATASET_COMPLETO.md).
+O próximo passo é medir a influência da cor e do fundo.
 

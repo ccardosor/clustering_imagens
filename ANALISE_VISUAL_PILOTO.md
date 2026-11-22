@@ -102,8 +102,12 @@ O piloto encontrou três tipos de resultado:
 
 Assim, dez grupos é uma hipótese útil para exploração, mas ainda não uma
 quantidade validada. A análise também mostra que a ResNet representa tanto a
-flor quanto fatores como cor, fundo e enquadramento. O próximo experimento deve
-medir esses efeitos antes de processar definitivamente as 8.189 imagens.
+flor quanto fatores como cor, fundo e enquadramento. Naquele momento, a
+recomendação era medir esses efeitos antes de processar as 8.189 imagens.
+
+A execução integral foi posteriormente concluída e está documentada em
+[`RESULTADOS_DATASET_COMPLETO.md`](RESULTADOS_DATASET_COMPLETO.md). A análise de
+cor e fundo permanece como comparação da linha de base completa.
 
 ## Próximos passos recomendados
 
@@ -121,8 +125,7 @@ As próximas etapas são:
    de cinza ou com uma representação que reduza a informação cromática.
 2. Reduzir a influência do cenário por recorte da região central ou separação
    aproximada entre flor e fundo, e então comparar a estabilidade.
-3. Só depois de definir critérios mínimos de qualidade, extrair e agrupar as
-   8.189 imagens. Uma configuração candidata deve convergir em várias sementes,
-   preservar todos os grupos, evitar centroides quase coincidentes e produzir
-   galerias visualmente defensáveis.
+3. Comparar essas alternativas com a linha de base das 8.189 imagens, exigindo
+   convergência em várias sementes, preservação de todos os grupos, centroides
+   não coincidentes e galerias visualmente defensáveis.
 

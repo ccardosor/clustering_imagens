@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 
 from clustering_imagens.piloto import (
     calcular_xie_beni,
+    carregar_ou_preparar_representacao,
     exportar_pertinencias,
     fuzzy_c_means,
     preparar_representacao,
@@ -64,6 +66,31 @@ def test_preparacao_aplica_pca_e_normalizacao_l2() -> None:
     assert representacao.shape == (20, 3)
     np.testing.assert_allclose(np.linalg.norm(representacao, axis=1), 1.0)
     assert variancia is not None and 0 < variancia <= 1
+
+
+def test_reutiliza_representacao_pca_compativel(tmp_path: Path) -> None:
+    gerador = np.random.default_rng(17)
+    arquivo_caracteristicas = tmp_path / "caracteristicas.npz"
+    arquivo_cache = tmp_path / "representacao.npz"
+    np.savez_compressed(
+        arquivo_caracteristicas,
+        caracteristicas=gerador.normal(size=(20, 8)).astype(np.float32),
+        caminhos=np.asarray([f"imagem_{indice}.jpg" for indice in range(20)]),
+    )
+    primeira = carregar_ou_preparar_representacao(
+        arquivo_caracteristicas, 3, 42, arquivo_cache
+    )
+
+    with patch(
+        "clustering_imagens.piloto.preparar_representacao",
+        side_effect=AssertionError("O PCA não deveria ser recalculado."),
+    ):
+        segunda = carregar_ou_preparar_representacao(
+            arquivo_caracteristicas, 3, 42, arquivo_cache
+        )
+
+    np.testing.assert_allclose(primeira[0], segunda[0])
+    assert primeira[1:] == segunda[1:]
 
 
 def test_rejeita_quantidade_invalida_de_clusters() -> None:

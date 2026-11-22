@@ -107,6 +107,8 @@ def executar_grade_piloto(
     quantidade_clusters: int = 10,
     expoente_fuzzificacao: float = 1.2,
     semente_pca: int = 42,
+    maximo_iteracoes: int = 300,
+    tolerancia: float = 1e-5,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Executa a grade, alinha resultados e salva tabelas comparáveis."""
 
@@ -137,6 +139,13 @@ def executar_grade_piloto(
                 expoente_fuzzificacao=expoente_fuzzificacao,
                 semente=semente,
                 semente_pca=semente_pca,
+                maximo_iteracoes=maximo_iteracoes,
+                tolerancia=tolerancia,
+                arquivo_cache_representacao=(
+                    diretorio_saida
+                    / f"pca_{quantidade_componentes:03}"
+                    / "representacao_pca.npz"
+                ),
             )
             linha = asdict(metricas)
             linha["diretorio_execucao"] = diretorio_execucao.relative_to(
@@ -247,6 +256,8 @@ def criar_analisador_argumentos() -> argparse.ArgumentParser:
     analisador.add_argument("--quantidade-clusters", type=int, default=10)
     analisador.add_argument("--expoente-fuzzificacao", type=float, default=1.2)
     analisador.add_argument("--semente-pca", type=int, default=42)
+    analisador.add_argument("--maximo-iteracoes", type=int, default=300)
+    analisador.add_argument("--tolerancia", type=float, default=1e-5)
     return analisador
 
 
@@ -262,6 +273,8 @@ def principal(argumentos: Sequence[str] | None = None) -> int:
         quantidade_clusters=opcoes.quantidade_clusters,
         expoente_fuzzificacao=opcoes.expoente_fuzzificacao,
         semente_pca=opcoes.semente_pca,
+        maximo_iteracoes=opcoes.maximo_iteracoes,
+        tolerancia=opcoes.tolerancia,
     )
     print(resumo.to_json(orient="records", force_ascii=False, indent=2))
     return 0
