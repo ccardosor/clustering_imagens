@@ -29,6 +29,38 @@ def carregar_execucoes(diretorio_experimentos: Path) -> pd.DataFrame:
     return tabela
 
 
+def descobrir_fontes_dados(
+    diretorio_configurado: Path,
+) -> dict[str, Path]:
+    """Localiza os artefatos do piloto e do dataset completo, quando existem."""
+
+    configurado = diretorio_configurado.resolve()
+    if configurado.name != "experimentos":
+        return (
+            {"configurada": configurado}
+            if (configurado / "resultados.csv").is_file()
+            else {}
+        )
+
+    if configurado.parent.name == "completo":
+        raiz_artefatos = configurado.parent.parent
+    else:
+        raiz_artefatos = configurado.parent
+
+    candidatos = {
+        "piloto": raiz_artefatos / "experimentos",
+        "completo": raiz_artefatos / "completo" / "experimentos",
+    }
+    fontes = {
+        identificador: caminho
+        for identificador, caminho in candidatos.items()
+        if (caminho / "resultados.csv").is_file()
+    }
+    if not fontes and (configurado / "resultados.csv").is_file():
+        fontes["configurada"] = configurado
+    return fontes
+
+
 def carregar_dados_execucao(
     diretorio_experimentos: Path, diretorio_relativo: str
 ) -> tuple[pd.DataFrame, dict[str, Any]]:

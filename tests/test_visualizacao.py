@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from clustering_imagens.visualizacao import (
+    descobrir_fontes_dados,
     resolver_caminho_imagem,
     selecionar_expoente_candidato,
     selecionar_galeria,
@@ -91,3 +92,17 @@ def test_selecionar_expoente_candidato_prioriza_estabilidade_valida() -> None:
     )
 
     assert selecionar_expoente_candidato(resumo) == 1.2
+
+
+def test_descobrir_fontes_dados_encontra_piloto_e_completo(tmp_path: Path) -> None:
+    piloto = tmp_path / "experimentos"
+    completo = tmp_path / "completo" / "experimentos"
+    piloto.mkdir(parents=True)
+    completo.mkdir(parents=True)
+    (piloto / "resultados.csv").touch()
+    (completo / "resultados.csv").touch()
+
+    fontes = descobrir_fontes_dados(piloto)
+
+    assert fontes == {"piloto": piloto, "completo": completo}
+    assert descobrir_fontes_dados(completo) == fontes

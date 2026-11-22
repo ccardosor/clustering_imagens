@@ -228,6 +228,11 @@ entre sementes:
 .venv\Scripts\streamlit run streamlit_app.py
 ```
 
+Quando os dois conjuntos de artefatos estão disponíveis, a barra lateral
+oferece as opções **Piloto · 500** e **Dataset completo · 8.189**. O dataset
+completo é selecionado inicialmente, e a escolha também pode ser compartilhada
+pelos parâmetros da URL.
+
 O app lê os artefatos já calculados e não executa ResNet, PCA ou FCM durante a
 interação. Para instalar somente as dependências do dashboard, sem PyTorch:
 

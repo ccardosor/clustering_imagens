@@ -320,6 +320,14 @@ No PCA-64, a concordância dominante média foi 78,6% e o Rand ajustado médio f
 
 ## 8. Como explicar as áreas do dashboard
 
+### Seletor de conjunto analisado
+
+Quando os artefatos estão disponíveis localmente, a barra lateral permite
+alternar entre o piloto de 500 imagens e o dataset completo de 8.189 imagens.
+O dataset completo é a opção inicial. A troca substitui métricas, projeções,
+pertinências, estabilidade e galerias em conjunto, evitando misturar resultados
+das duas execuções.
+
 ### Seletor de modelo
 
 Na barra lateral é possível escolher a representação PCA e a semente. Essa

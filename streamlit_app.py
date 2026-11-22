@@ -14,6 +14,7 @@ from clustering_imagens.estabilidade_imagens import identificar_imagens_instavei
 from clustering_imagens.visualizacao import (
     carregar_dados_execucao,
     carregar_execucoes,
+    descobrir_fontes_dados,
     resolver_caminho_imagem,
     rotulo_execucao,
     selecionar_expoente_candidato,
@@ -23,7 +24,7 @@ from clustering_imagens.visualizacao import (
 )
 
 RAIZ_PROJETO = Path(__file__).resolve().parent
-DIRETORIO_EXPERIMENTOS = Path(
+DIRETORIO_EXPERIMENTOS_CONFIGURADO = Path(
     os.environ.get(
         "CLUSTERING_ARTEFATOS_DIR",
         str(RAIZ_PROJETO / "artefatos" / "experimentos"),
@@ -77,6 +78,15 @@ def carregar_tabela_cache(caminho: str, modificacao: int) -> pd.DataFrame:
     return pd.read_csv(caminho)
 
 
+@st.cache_data(max_entries=8)
+def carregar_quantidade_fonte(caminho: str, modificacao: int) -> int:
+    """Lê a quantidade de imagens para identificar cada fonte de dados."""
+
+    del modificacao
+    tabela = pd.read_csv(caminho, usecols=["quantidade_imagens"], nrows=1)
+    return int(tabela.iloc[0]["quantidade_imagens"])
+
+
 st.set_page_config(
     page_title="Agrupamento visual de flores",
     page_icon="🌸",
@@ -87,6 +97,69 @@ st.title("Agrupamento visual de flores")
 st.caption(
     "Explore as afinidades fuzzy, compare execuções e inspecione imagens "
     "representativas ou de fronteira."
+)
+
+fontes_dados = descobrir_fontes_dados(DIRETORIO_EXPERIMENTOS_CONFIGURADO)
+if not fontes_dados:
+    st.error(
+        "Nenhuma fonte com resultados experimentais foi encontrada.",
+        title="Artefatos não encontrados",
+    )
+    st.code(
+        "python executar.py experimentos --config configuracao_completa.toml"
+    )
+    st.stop()
+
+nomes_fontes = {
+    "piloto": "Piloto",
+    "completo": "Dataset completo",
+    "configurada": "Fonte configurada",
+}
+quantidades_fontes = {
+    identificador: carregar_quantidade_fonte(
+        str(diretorio / "resultados.csv"),
+        (diretorio / "resultados.csv").stat().st_mtime_ns,
+    )
+    for identificador, diretorio in fontes_dados.items()
+}
+
+with st.sidebar:
+    st.header("Dados")
+    if len(fontes_dados) > 1:
+        fonte_selecionada = st.segmented_control(
+            "Conjunto analisado",
+            list(fontes_dados),
+            default=(
+                "completo" if "completo" in fontes_dados else next(iter(fontes_dados))
+            ),
+            format_func=lambda identificador: (
+                f"{nomes_fontes[identificador]} · "
+                f"{quantidades_fontes[identificador]:,}".replace(",", ".")
+            ),
+            required=True,
+            key="fonte_dados",
+            bind="query-params",
+            wrap=True,
+        )
+    else:
+        fonte_selecionada = next(iter(fontes_dados))
+        st.caption(
+            f"{nomes_fontes[fonte_selecionada]} · "
+            f"{quantidades_fontes[fonte_selecionada]:,} imagens".replace(",", ".")
+        )
+    st.caption(
+        "A troca altera os artefatos exibidos; as imagens originais permanecem "
+        "as mesmas."
+    )
+
+if fonte_selecionada is None:
+    st.stop()
+DIRETORIO_EXPERIMENTOS = fontes_dados[fonte_selecionada]
+nome_fonte_ativa = nomes_fontes[fonte_selecionada]
+quantidade_fonte_ativa = quantidades_fontes[fonte_selecionada]
+st.caption(
+    f":material/database: Fonte ativa: **{nome_fonte_ativa}** · "
+    f"{quantidade_fonte_ativa:,} imagens".replace(",", ".")
 )
 
 caminho_resultados = DIRETORIO_EXPERIMENTOS / "resultados.csv"
@@ -108,6 +181,7 @@ execucoes = execucoes.copy()
 execucoes["rotulo"] = execucoes.apply(rotulo_execucao, axis=1)
 
 with st.sidebar:
+    st.divider()
     st.header("Modelo")
     rotulo_selecionado = st.selectbox(
         "Execução",
