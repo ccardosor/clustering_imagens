@@ -336,11 +336,19 @@ grafico_distribuicao = (
 
 coluna_dispersao, coluna_distribuicao = st.columns((2, 1))
 with coluna_dispersao.container(border=True):
-    st.subheader("Mapa visual da amostra")
+    titulo_mapa = (
+        "Mapa visual do dataset completo"
+        if fonte_selecionada == "completo"
+        else "Mapa visual da amostra piloto"
+    )
+    st.subheader(titulo_mapa)
     st.altair_chart(
         grafico_dispersao,
         key="mapa_visual",
-        alt="Projeção bidimensional das flores colorida pelo grupo FCM dominante",
+        alt=(
+            f"Projeção bidimensional de {quantidade_fonte_ativa} flores "
+            "colorida pelo grupo FCM dominante"
+        ),
     )
 with coluna_distribuicao.container(border=True):
     st.subheader("Tamanho dos grupos")
