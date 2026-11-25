@@ -246,3 +246,21 @@ interação. Para instalar somente as dependências do dashboard, sem PyTorch:
 py -3.11 -m venv .venv
 .venv\Scripts\python -m pip install -e .
 ```
+
+### Preparação em outra máquina
+
+Os artefatos mínimos do piloto e do dataset completo são versionados junto com
+o código. Vetores ResNet brutos, pranchas e resultados intermediários continuam
+fora do Git porque não são necessários para a apresentação.
+
+Depois de clonar o repositório em uma máquina Windows com Python 3.11 ou mais
+recente, execute:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\preparar_apresentacao.ps1
+```
+
+O script baixa as 8.189 imagens do [Oxford Flowers 102](https://www.robots.ox.ac.uk/~vgg/data/flowers/102/),
+confere a quantidade de arquivos, cria `.venv`, instala somente as dependências
+do dashboard e inicia o Streamlit. Para apenas preparar a máquina sem iniciar o
+servidor, acrescente `-NaoIniciar`.

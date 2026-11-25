@@ -13,5 +13,25 @@ htmlcov/
 
 # Dataset e artefatos gerados localmente
 /102flowers/
-/artefatos/
+/artefatos/*
+
+# Resultados mínimos necessários para executar o dashboard após o clone
+!/artefatos/experimentos/
+!/artefatos/experimentos/**
+!/artefatos/completo/
+/artefatos/completo/*
+!/artefatos/completo/experimentos/
+!/artefatos/completo/experimentos/**
+!/artefatos/avaliacao_clusters/
+/artefatos/avaliacao_clusters/*
+!/artefatos/avaliacao_clusters/resumo_clusters.csv
+!/artefatos/avaliacao_fuzzificacao/
+/artefatos/avaliacao_fuzzificacao/*
+!/artefatos/avaliacao_fuzzificacao/resumo_fuzzificacao.csv
+
+# Arquivos de reprocessamento que o dashboard não carrega
+/artefatos/**/configuracao.json
+/artefatos/**/estabilidade.csv
+/artefatos/**/representacao_pca.npz
+
 /outputs/

@@ -1,0 +1,2 @@
+componentes_pca,variancia_explicada_pca,execucoes,convergencias,xie_beni_medio,silhueta_fcm_media,silhueta_kmeans_media,pertinencia_principal_media,concordancia_dominante_media,indice_rand_ajustado_medio,diferenca_media_pertinencias
+64,0.7768112964336935,3,3,3.9884910168012464,0.08103318404670157,0.08533086161694507,0.5692308185151154,0.7501526437904507,0.599362983736506,0.037667067071769825
